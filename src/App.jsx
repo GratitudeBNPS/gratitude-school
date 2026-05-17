@@ -9,7 +9,7 @@ const TERMS = ["Term 1","Term 2","Term 3","Annual","Monthly"];
 const G = { g1:"#1B3A0C",g2:"#2E5818",g3:"#4A7C2F",g5:"#F0F8E8",amber:"#9E6B08",amberBg:"#FEF6E0",red:"#B91C1C",redBg:"#FEF2F2",blue:"#1E40AF",blueBg:"#EFF6FF",bg:"#F5F5F0",surface:"#FFFFFF",border:"#E0E0D4",text:"#18181A",muted:"#6B6B60" };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = n => "BHD " + parseFloat(n||0).toFixed(3);
+const fmt = n => "XAF " + Math.round(parseFloat(n||0)).toLocaleString();
 const today = () => new Date().toISOString().slice(0,10);
 const inits = s => (s.first_name?.[0]||"")+(s.last_name?.[0]||"");
 
@@ -81,7 +81,7 @@ function Receipt({ payment, student, balance }) {
     ["Received by", payment.received_by || "Admin"],
     ...(payment.notes ? [["Notes", payment.notes]] : []),
   ];
-  const whatsappText = `*GRATITUDE SCHOOL*\nPayment Receipt ✅\nReceipt: ${payment.receipt_number}\n\nStudent: ${student?.first_name} ${student?.last_name}\nID: ${student?.student_code}\nClass: ${student?.grade}\nFee: ${payment.fee_name||"General"}\nDate: ${payment.payment_date||payment.date}\nMethod: ${METHODS[payment.method]||payment.method}\n\n*Amount paid: ${fmt(payment.amount_paid)}*\nBalance remaining: ${fmt(balance)}\n\n_Gratitude School — Official Receipt_`;
+  const whatsappText = `*GRATITUDE BILINGUAL NURSERY & PRIMARY SCHOOL*\nPayment Receipt ✅\nReceipt: ${payment.receipt_number}\n\nStudent: ${student?.first_name} ${student?.last_name}\nID: ${student?.student_code}\nClass: ${student?.grade}\nFee: ${payment.fee_name||"General"}\nDate: ${payment.payment_date||payment.date}\nMethod: ${METHODS[payment.method]||payment.method}\n\n*Amount paid: ${fmt(payment.amount_paid)}*\nBalance remaining: ${fmt(balance)}\n\n_Gratitude Bilingual Nursery — Official Receipt_`;
   return (
     <div>
       <div style={{border:`2px dashed ${G.border}`,borderRadius:10,padding:20,background:"#FAFAF6"}}>
@@ -104,7 +104,7 @@ function Receipt({ payment, student, balance }) {
           </div>
         </div>
         <div style={{textAlign:"center",marginTop:16,fontSize:11,color:G.muted,borderTop:`1px dashed ${G.border}`,paddingTop:12}}>
-          This is an official receipt from Gratitude School
+          This is an official receipt from Gratitude Bilingual Nursery & Primary School
         </div>
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14}}>
@@ -290,7 +290,7 @@ export default function App() {
   }
 
   // ── Loading / error states ──────────────────────────────────────────────────
-  if (loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Georgia,serif",color:G.g2,fontSize:18,gap:12}}>Loading Gratitude School...</div>;
+  if (loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Georgia,serif",color:G.g2,fontSize:18,gap:12}}>Loading...</div>;
   if (err)     return <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100vh",gap:12,padding:20}}><div style={{fontSize:16,color:G.red,fontWeight:600}}>Connection error</div><div style={{fontSize:13,color:G.muted,maxWidth:400,textAlign:"center"}}>{err}</div><div style={{fontSize:12,color:G.muted,maxWidth:400,textAlign:"center"}}>Check your .env file has the correct VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY values.</div><Btn onClick={fetchAll}>Retry</Btn></div>;
 
   // ── Nav ─────────────────────────────────────────────────────────────────────
@@ -303,9 +303,9 @@ export default function App() {
 
       {/* Sidebar */}
       <div style={{width:200,background:G.g1,display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh",overflowY:"auto"}}>
-        <div style={{padding:"18px 16px 14px",borderBottom:"1px solid rgba(255,255,255,.12)"}}>
-          <div style={{fontFamily:"Georgia,serif",fontSize:15,fontWeight:"bold",color:"#fff",lineHeight:1.3}}>Gratitude School</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:2}}>Admin System</div>
+        <div style={{padding:"10px 12px 10px",borderBottom:"1px solid rgba(255,255,255,.12)",textAlign:"center"}}>
+          <img src="/logo.png" alt="Gratitude Bilingual Nursery" style={{width:"100%",maxWidth:160,borderRadius:6,background:"#fff",padding:"5px"}}/>
+          <div style={{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:6}}>Admin System</div>
         </div>
         <nav style={{padding:"10px 0",flex:1}}>
           {navItems.map(n=>(
@@ -315,7 +315,7 @@ export default function App() {
             </div>
           ))}
         </nav>
-        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.1)",fontSize:11,color:"rgba(255,255,255,.35)"}}>© 2026 Gratitude School</div>
+        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,.1)",fontSize:11,color:"rgba(255,255,255,.35)"}}>© 2026 Gratitude Bilingual Nursery</div>
       </div>
 
       {/* Main */}
@@ -613,7 +613,7 @@ export default function App() {
           <FormGrid>
             <FG label="Category"><Sel value={form.category||"tuition"} onChange={ff("category")}>{Object.entries(CATS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Sel></FG>
             <FG label="Term"><Sel value={form.term||"Term 1"} onChange={ff("term")}>{TERMS.map(t=><option key={t}>{t}</option>)}</Sel></FG>
-            <FG label="Amount (BHD) *"><Input type="number" step="0.001" value={form.amount||""} onChange={ff("amount")} placeholder="0.000"/></FG>
+            <FG label="Amount (BHD) *"><Input type="number" step="1" value={form.amount||""} onChange={ff("amount")} placeholder="e.g. 50000"/></FG>
             <FG label="Applies to"><Sel value={form.grades||"all"} onChange={ff("grades")}><option value="all">All classes</option>{GRADES.map(g=><option key={g} value={g}>{g}</option>)}</Sel></FG>
           </FormGrid>
         </div>
@@ -642,7 +642,7 @@ export default function App() {
                 </Sel>
               </FG>
               <FormGrid>
-                <FG label="Amount paid (BHD) *"><Input type="number" step="0.001" value={form.amount_paid||""} onChange={ff("amount_paid")} placeholder="0.000"/></FG>
+                <FG label="Amount paid (BHD) *"><Input type="number" step="1" value={form.amount_paid||""} onChange={ff("amount_paid")} placeholder="e.g. 50000"/></FG>
                 <FG label="Date *"><Input type="date" value={form.payment_date||today()} onChange={ff("payment_date")}/></FG>
                 <FG label="Payment method"><Sel value={form.method||"cash"} onChange={ff("method")}>{Object.entries(METHODS).map(([v,l])=><option key={v} value={v}>{l}</option>)}</Sel></FG>
                 <FG label="Received by"><Input value={form.received_by||"Admin"} onChange={ff("received_by")}/></FG>
