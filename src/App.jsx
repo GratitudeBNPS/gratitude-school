@@ -671,7 +671,7 @@ export default function App(){
       })()}
 
       <Modal open={modal==="invite"} onClose={closeModal} title="Invite Staff Member" size="sm"
-        footer={<><Btn onClick={closeModal}>Cancel</Btn><Btn variant="primary" onClick={async()=>{if(!form.inv_email?.trim()||!form.inv_name?.trim()||!form.inv_role){showToast("Email, name and role required.");return;}setSaving(true);const{error}=await supabase.auth.admin.inviteUserByEmail(form.inv_email,{data:{full_name:form.inv_name,role:form.inv_role}});setSaving(false);if(error){showToast("Error: "+error.message);return;}closeModal();showToast(`Invitation sent to ${form.inv_email}!`);}} disabled={saving}>{saving?<><Spinner/>Sending...</>:"Send invitation"}</Btn></>}>
+        footer={<><Btn onClick={closeModal}>Cancel</Btn><Btn variant="primary" onClick={async()=>{if(!form.inv_email?.trim()||!form.inv_name?.trim()||!form.inv_role){showToast("Email, name and role required.");return;}setSaving(true);const{error}=await fetch("/api/invite-user",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:form.inv_email,full_name:form.inv_name,role:form.inv_role})});setSaving(false);if(error){showToast("Error: "+error.message);return;}closeModal();showToast(`Invitation sent to ${form.inv_email}!`);}} disabled={saving}>{saving?<><Spinner/>Sending...</>:"Send invitation"}</Btn></>}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <FG label="Full name *"><Input value={form.inv_name||""} onChange={ff("inv_name")} placeholder="e.g. Marie Nguyen"/></FG>
           <FG label="Email address *"><Input type="email" value={form.inv_email||""} onChange={ff("inv_email")} placeholder="staff@school.com"/></FG>
