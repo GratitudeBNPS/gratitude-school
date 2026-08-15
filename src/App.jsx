@@ -233,19 +233,87 @@ function FileImportModal({onClose,onImported,academicYear}){
   const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
 
   function downloadTemplate(){
-    const rows=[
-      ["First Name","Last Name","Date of Birth (YYYY-MM-DD)","Gender (Male or Female)","Class","Parent Name","Phone Number","Status (active or inactive)","Notes"],
-      ["Jean","Dupont","2015-03-15","Male","Grade 1","Marie Dupont","237123456789","active",""],
-      ["Amina","Bello","2016-07-22","Female","KG B","Ibrahim Bello","237987654321","active","New student"],
-      ["Paul","Nkeng","2014-11-05","Male","Grade 3","","237655443322","active",""],
+    const GRADE_OPTIONS=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+    const GENDER_OPTIONS=["Male","Female"];
+
+    // Build main Students sheet
+    const headers=["First Name","Last Name","Date of Birth (YYYY-MM-DD)","Gender","Class","Parent Name","Phone Number","Status","Notes"];
+    const sample1=["Jean","Dupont","2015-03-15","Male","Grade 1","Marie Dupont","237123456789","active",""];
+    const sample2=["Amina","Bello","2016-07-22","Female","KG B","Ibrahim Bello","237987654321","active","New student"];
+    const sample3=["Paul","Nkeng","2014-11-05","Male","Grade 3","","237655443322","active",""];
+    const ws=XLSX.utils.aoa_to_sheet([headers,sample1,sample2,sample3]);
+
+    // Column widths
+    ws["!cols"]=[{wch:14},{wch:14},{wch:22},{wch:12},{wch:10},{wch:18},{wch:16},{wch:12},{wch:20}];
+
+    // Data validation — Gender dropdown (column D = index 3)
+    // Data validation — Class dropdown (column E = index 4)
+    ws["!dataValidations"]=[
+      {
+        type:"list",
+        sqref:"D2:D1000",
+        formula1:'"'+GENDER_OPTIONS.join(",") +'"',
+        showDropDown:false,
+        showErrorMessage:true,
+        error:"Please select Male or Female from the dropdown.",
+        errorTitle:"Invalid Gender"
+      },
+      {
+        type:"list",
+        sqref:"E2:E1000",
+        formula1:'"'+GRADE_OPTIONS.join(",") +'"',
+        showDropDown:false,
+        showErrorMessage:true,
+        error:"Please select a class from the dropdown.",
+        errorTitle:"Invalid Class"
+      },
+      {
+        type:"list",
+        sqref:"H2:H1000",
+        formula1:'"active,inactive"',
+        showDropDown:false,
+        showErrorMessage:true,
+        error:"Please enter active or inactive.",
+        errorTitle:"Invalid Status"
+      }
     ];
-    const csv=rows.map(r=>r.map(v=>'"'+v+'"').join(',')).join('\n');
-    const blob=new Blob([csv],{type:'text/csv'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download='Gratitude_Student_Import_Template.csv';
-    document.body.appendChild(a);a.click();
-    document.body.removeChild(a);URL.revokeObjectURL(url);
+
+    // Build Reference sheet (visible guide for staff)
+    const refHeaders=["Valid Gender Values","Valid Class Values","Valid Status Values","Date Format Example"];
+    const refRows=GRADE_OPTIONS.map((g,i)=>[
+      i<GENDER_OPTIONS.length?GENDER_OPTIONS[i]:"",
+      g,
+      i===0?"active":i===1?"inactive":"",
+      i===0?"2015-03-15 (YYYY-MM-DD)":""
+    ]);
+    const wsRef=XLSX.utils.aoa_to_sheet([refHeaders,...refRows]);
+    wsRef["!cols"]=[{wch:18},{wch:14},{wch:16},{wch:22}];
+
+    // Create workbook with both sheets
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,"Students",ws);
+    XLSX.utils.book_append_sheet(wb,"Reference",wsRef);
+
+    // Download as .xlsx using Blob (works in browser)
+    try{
+      const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+      const blob=new Blob([wbout],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download="Gratitude_Student_Import_Template.xlsx";
+      document.body.appendChild(a);a.click();
+      document.body.removeChild(a);URL.revokeObjectURL(url);
+    }catch(e){
+      // Fallback to CSV if xlsx fails
+      const rows=[headers,sample1,sample2,sample3];
+      const csv=rows.map(r=>r.map(v=>'"'+v+'"').join(",")).join("\n");
+      const blob=new Blob([csv],{type:"text/csv"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;a.download="Gratitude_Student_Import_Template.csv";
+      document.body.appendChild(a);a.click();
+      document.body.removeChild(a);URL.revokeObjectURL(url);
+    }
   }
 
   function mapRow(row){
@@ -341,7 +409,7 @@ function FileImportModal({onClose,onImported,academicYear}){
         <div style={{flex:1,minWidth:240,padding:14,background:"#F0F8E8",borderRadius:8,border:"1px solid #4A7C2F33"}}>
           <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C",marginBottom:4}}>Step 1 — Download the template</div>
           <div style={{fontSize:12,color:"#6B6B60",marginBottom:10}}>Fill it in with your students (Excel or Google Sheets), then upload below.</div>
-          <Btn variant="primary" onClick={downloadTemplate}>📥 Download Excel Template</Btn>
+          <Btn variant="primary" onClick={downloadTemplate}>📥 Download Template (with dropdowns)</Btn>
         </div>
         <div style={{flex:1,minWidth:240,padding:14,background:"#F5F5F0",borderRadius:8,border:"1px solid #E0E0D4"}}>
           <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C",marginBottom:4}}>Step 2 — Upload your filled file</div>
