@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { jsPDF } from "jspdf";
+import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { supabase } from "./lib/supabase";
 
 const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
@@ -222,6 +224,197 @@ function LoginScreen({onLogin}){
   );
 }
 
+function FileImportModal({onClose,onImported,academicYear}){
+  const [students,setStudents]=React.useState([]);
+  const [saving,setSaving]=React.useState(false);
+  const [err,setErr]=React.useState("");
+  const [fileName,setFileName]=React.useState("");
+  const fileRef=React.useRef();
+  const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+
+  function downloadTemplate(){
+    const headers=["First Name","Last Name","Date of Birth (YYYY-MM-DD)","Gender (Male or Female)","Class","Parent Name","Phone Number","Status (active or inactive)","Notes"];
+    const sample1=["Jean","Dupont","2015-03-15","Male","Grade 1","Marie Dupont","237123456789","active",""];
+    const sample2=["Amina","Bello","2016-07-22","Female","KG B","Ibrahim Bello","237987654321","active","New student"];
+    const sample3=["Paul","Nkeng","2014-11-05","Male","Grade 3","","237655443322","active",""];
+    const ws=XLSX.utils.aoa_to_sheet([headers,sample1,sample2,sample3]);
+    // Column widths
+    ws["!cols"]=[{wch:14},{wch:14},{wch:22},{wch:20},{wch:10},{wch:18},{wch:16},{wch:22},{wch:20}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,"Students",ws);
+    XLSX.writeFile(wb,"Gratitude_Student_Import_Template.xlsx");
+  }
+
+  function mapRow(row){
+    const k=key=>Object.keys(row).find(h=>h.toLowerCase().replace(/[^a-z]/g,"")===key.toLowerCase().replace(/[^a-z]/g,""));
+    const g=key=>{const found=k(key);return found?String(row[found]||"").trim():"";};
+    return{
+      first_name:g("firstname")||g("first name"),
+      last_name:g("lastname")||g("last name"),
+      date_of_birth:g("dateofbirth")||g("dateofbirthyyyymmdd")||g("dob")||"",
+      gender:g("gender")||g("gendermaleorfemale")||"",
+      grade:g("class")||g("grade")||"",
+      parent_name:g("parentname")||g("parent name")||g("parent")||"",
+      phone:g("phonenumber")||g("phone number")||g("phone")||"",
+      status:g("status")||g("statusactivityorinactive")||"active",
+      notes:g("notes")||"",
+    };
+  }
+
+  function parseRows(rawRows){
+    return rawRows
+      .map((row,i)=>({...mapRow(row),_id:Math.random().toString(36).slice(2),_row:i+2}))
+      .filter(r=>r.first_name||r.last_name);
+  }
+
+  function handleFile(e){
+    const file=e.target.files[0];
+    if(!file)return;
+    setErr("");setStudents([]);setFileName(file.name);
+    const ext=file.name.split(".").pop().toLowerCase();
+    if(ext==="csv"){
+      Papa.parse(file,{
+        header:true,skipEmptyLines:true,
+        complete:res=>{
+          const rows=parseRows(res.data);
+          if(!rows.length){setErr("No student rows found. Check your file matches the template.");return;}
+          setStudents(rows);
+        },
+        error:e=>setErr("CSV error: "+e.message)
+      });
+    } else if(ext==="xlsx"||ext==="xls"){
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        try{
+          const wb=XLSX.read(ev.target.result,{type:"binary"});
+          const ws=wb.Sheets[wb.SheetNames[0]];
+          const data=XLSX.utils.sheet_to_json(ws);
+          const rows=parseRows(data);
+          if(!rows.length){setErr("No student rows found. Check your file matches the template.");return;}
+          setStudents(rows);
+        }catch(e){setErr("Excel error: "+e.message);}
+      };
+      reader.readAsBinaryString(file);
+    } else {
+      setErr("Only .csv, .xlsx or .xls files are supported.");
+    }
+  }
+
+  function update(id,field,value){setStudents(s=>s.map(x=>x._id===id?{...x,[field]:value}:x));}
+  function remove(id){setStudents(s=>s.filter(x=>x._id!==id));}
+
+  async function saveAll(){
+    const valid=students.filter(s=>s.first_name&&s.last_name&&s.grade);
+    if(!valid.length){alert("No valid rows to import. Every student needs at least First Name, Last Name and Class.");return;}
+    setSaving(true);
+    const payload=valid.map(s=>({
+      first_name:s.first_name.trim(),
+      last_name:s.last_name.trim(),
+      date_of_birth:s.date_of_birth||null,
+      gender:s.gender||null,
+      grade:s.grade,
+      parent_name:s.parent_name||null,
+      phone:s.phone||null,
+      enrolled_at:today(),
+      status:s.status==="inactive"?"inactive":"active",
+      academic_year:academicYear,
+      notes:s.notes||null,
+    }));
+    const{error}=await supabase.from("students").insert(payload);
+    setSaving(false);
+    if(error){alert("Error saving: "+error.message);return;}
+    onImported(valid.length);
+    onClose();
+  }
+
+  const valid=students.filter(s=>s.first_name&&s.last_name&&s.grade);
+
+  return(
+    <Modal open size="xl" onClose={onClose} title={"Import Students from CSV/Excel — "+academicYear}
+      footer={students.length>0?<><Btn onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={saveAll} disabled={saving}>{saving?"Saving...":"Import "+valid.length+" student"+(valid.length!==1?"s":"")}</Btn></>:null}>
+
+      {/* Step 1 - Download template */}
+      <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+        <div style={{flex:1,minWidth:240,padding:14,background:"#F0F8E8",borderRadius:8,border:"1px solid #4A7C2F33"}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C",marginBottom:4}}>Step 1 — Download the template</div>
+          <div style={{fontSize:12,color:"#6B6B60",marginBottom:10}}>Fill it in with your students (Excel or Google Sheets), then upload below.</div>
+          <Btn variant="primary" onClick={downloadTemplate}>📥 Download Excel Template</Btn>
+        </div>
+        <div style={{flex:1,minWidth:240,padding:14,background:"#F5F5F0",borderRadius:8,border:"1px solid #E0E0D4"}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C",marginBottom:4}}>Step 2 — Upload your filled file</div>
+          <div style={{fontSize:12,color:"#6B6B60",marginBottom:10}}>Accepts .xlsx, .xls or .csv files.</div>
+          <Btn onClick={()=>fileRef.current?.click()}>📂 {fileName?"Change file: "+fileName:"Choose file"}</Btn>
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{display:"none"}} onChange={handleFile}/>
+        </div>
+      </div>
+
+      {/* Column guide */}
+      {!students.length&&!err&&<div style={{padding:"10px 14px",background:"#FAFAF8",borderRadius:7,border:"1px solid #E0E0D4",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#6B6B60",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Required columns in your file</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {[["First Name","required"],["Last Name","required"],["Class","required — KG A, KG B, Grade 1–6"],["Date of Birth","YYYY-MM-DD"],["Gender","Male or Female"],["Parent Name","optional"],["Phone Number","optional"],["Status","active or inactive"],["Notes","optional"]].map(([col,note])=>(
+            <div key={col} style={{fontSize:11,padding:"3px 8px",borderRadius:4,background:note==="required"||note.startsWith("required")?"#F0F8E8":"#F0F0E8",color:note==="required"||note.startsWith("required")?"#2E5818":"#6B6B60",border:"1px solid "+(note==="required"||note.startsWith("required")?"#4A7C2F33":"#E0E0D4")}}>
+              <strong>{col}</strong>{note!=="required"&&<span style={{fontWeight:400}}> — {note}</span>}
+            </div>
+          ))}
+        </div>
+      </div>}
+
+      {/* Error */}
+      {err&&<div style={{padding:"10px 14px",background:"#FEF2F2",color:"#B91C1C",borderRadius:7,marginBottom:14,fontSize:13}}>{err}</div>}
+
+      {/* Preview table */}
+      {students.length>0&&<div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C"}}>{students.length} students found — review and correct before importing</div>
+          <div style={{fontSize:12,color:"#6B6B60"}}>{valid.length} valid · {students.length-valid.length} missing required fields</div>
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+            <thead><tr>
+              {["Row","First Name *","Last Name *","Class *","Date of Birth","Gender","Parent Name","Phone","Status",""].map(h=>(
+                <th key={h} style={{textAlign:"left",padding:"7px 10px",fontSize:10,fontWeight:600,color:"#6B6B60",borderBottom:"1px solid #E0E0D4",background:"#F5F5F0",textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {students.map(s=>{
+                const isValid=s.first_name&&s.last_name&&s.grade;
+                return(
+                  <tr key={s._id} style={{background:isValid?"":"#FEF2F2"}}>
+                    <td style={{padding:"7px 10px",borderBottom:"1px solid #E0E0D4",fontSize:11,color:"#6B6B60"}}>{s._row}</td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><input style={{width:90,padding:"3px 6px",border:"1px solid "+(s.first_name?"#E0E0D4":"#B91C1C"),borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.first_name||""} onChange={e=>update(s._id,"first_name",e.target.value)}/></td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><input style={{width:90,padding:"3px 6px",border:"1px solid "+(s.last_name?"#E0E0D4":"#B91C1C"),borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.last_name||""} onChange={e=>update(s._id,"last_name",e.target.value)}/></td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}>
+                      <select style={{padding:"3px 6px",border:"1px solid "+(s.grade?"#E0E0D4":"#B91C1C"),borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.grade||""} onChange={e=>update(s._id,"grade",e.target.value)}>
+                        <option value="">Select...</option>{GRADES.map(g=><option key={g}>{g}</option>)}
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><input style={{width:100,padding:"3px 6px",border:"1px solid #E0E0D4",borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.date_of_birth||""} onChange={e=>update(s._id,"date_of_birth",e.target.value)} placeholder="YYYY-MM-DD"/></td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}>
+                      <select style={{padding:"3px 6px",border:"1px solid #E0E0D4",borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.gender||""} onChange={e=>update(s._id,"gender",e.target.value)}>
+                        <option value="">—</option><option>Male</option><option>Female</option>
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><input style={{width:110,padding:"3px 6px",border:"1px solid #E0E0D4",borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.parent_name||""} onChange={e=>update(s._id,"parent_name",e.target.value)} placeholder="Parent name"/></td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><input style={{width:110,padding:"3px 6px",border:"1px solid #E0E0D4",borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.phone||""} onChange={e=>update(s._id,"phone",e.target.value)} placeholder="237..."/></td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}>
+                      <select style={{padding:"3px 6px",border:"1px solid #E0E0D4",borderRadius:5,fontSize:12,fontFamily:"inherit"}} value={s.status||"active"} onChange={e=>update(s._id,"status",e.target.value)}>
+                        <option value="active">Active</option><option value="inactive">Inactive</option>
+                      </select>
+                    </td>
+                    <td style={{padding:"4px 6px",borderBottom:"1px solid #E0E0D4"}}><button onClick={()=>remove(s._id)} style={{background:"none",border:"none",color:"#B91C1C",cursor:"pointer",fontSize:16,padding:0}}>×</button></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {students.length-valid.length>0&&<div style={{fontSize:12,color:"#B91C1C",marginTop:8}}>⚠ Rows highlighted in red are missing required fields (First Name, Last Name or Class). Fix them or remove them before importing.</div>}
+      </div>}
+    </Modal>
+  );
+}
+
 function BulkScan({onClose,onImported,academicYear}){
   const [files,setFiles]=useState([]);
   const [previews,setPreviews]=useState([]);
@@ -335,6 +528,7 @@ export default function App(){
   const [saving,setSaving]=useState(false);
   const [toast,setToast]=useState(null);
   const [showBulk,setShowBulk]=useState(false);
+  const [showFileImport,setShowFileImport]=useState(false);
 
   useEffect(()=>{
     supabase.auth.getSession().then(async({data:{session}})=>{
@@ -538,6 +732,7 @@ export default function App(){
             <div><div style={{fontFamily:"Georgia,serif",fontSize:21,fontWeight:"bold",color:"#1B3A0C"}}>Student Register</div><div style={{fontSize:12,color:"#6B6B60",marginTop:3}}>{currentYear} · {activeStudents.length} active students</div></div>
             <div style={{display:"flex",gap:8}}>
               {can(profile.role,"bulk_import")&&<Btn variant="blue" onClick={()=>setShowBulk(true)}>📷 Bulk Import</Btn>}
+              {can(profile.role,"bulk_import")&&<Btn onClick={()=>setShowFileImport(true)}>📄 CSV/Excel Import</Btn>}
               {can(profile.role,"students")&&<Btn variant="primary" onClick={()=>openModal("student")}>+ Add Student</Btn>}
             </div>
           </div>
@@ -843,6 +1038,8 @@ export default function App(){
           {academicYears.length>0&&<div style={{fontSize:12,color:"#6B6B60",padding:"8px 10px",background:"#F5F5F0",borderRadius:6}}>Existing years: <strong>{academicYears.map(y=>y.name+(y.is_current?" ★":"")).join(", ")}</strong></div>}
         </div>
       </Modal>
+
+      {showFileImport&&<FileImportModal onClose={()=>setShowFileImport(false)} onImported={n=>{showToast(n+" students imported successfully!");fetchAll();}} academicYear={currentYear}/>}
 
       {showBulk&&<BulkScan onClose={()=>setShowBulk(false)} onImported={n=>{showToast(`${n} students imported!`);fetchAll();}} academicYear={currentYear}/>}
 
