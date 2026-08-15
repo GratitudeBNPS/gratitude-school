@@ -225,11 +225,11 @@ function LoginScreen({onLogin}){
 }
 
 function FileImportModal({onClose,onImported,academicYear}){
-  const [students,setStudents]=React.useState([]);
-  const [saving,setSaving]=React.useState(false);
-  const [err,setErr]=React.useState("");
-  const [fileName,setFileName]=React.useState("");
-  const fileRef=React.useRef();
+  const [students,setStudents]=useState([]);
+  const [saving,setSaving]=useState(false);
+  const [err,setErr]=useState("");
+  const [fileName,setFileName]=useState("");
+  const fileRef=useRef();
   const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
 
   function downloadTemplate(){
