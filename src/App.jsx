@@ -311,6 +311,28 @@ export default function App(){
   }
   async function deleteFee(id){await supabase.from("fees").delete().eq("id",id);fetchAll();showToast("Fee removed.");}
 
+  async function saveAcademicYear(){
+    if(!form.year_name?.trim()){showToast("Year name required, e.g. 2026-2027");return;}
+    const trimmed=form.year_name.trim();
+    if(academicYears.some(y=>y.name===trimmed)){showToast("That academic year already exists.");return;}
+    if(!/^\d{4}-\d{4}$/.test(trimmed)){showToast("Use format YYYY-YYYY, e.g. 2026-2027");return;}
+    setSaving(true);
+    const{error}=await supabase.from("academic_years").insert([{name:trimmed,is_current:!!form.set_current}]);
+    if(!error&&form.set_current){
+      await supabase.from("academic_years").update({is_current:false}).neq("name",trimmed);
+      setCurrentYear(trimmed);
+    }
+    setSaving(false);
+    if(error){showToast("Error: "+error.message);return;}
+    closeModal();fetchAll();showToast("Academic year "+trimmed+" created!");
+  }
+
+  async function setYearAsCurrent(name){
+    await supabase.from("academic_years").update({is_current:false}).neq("name",name);
+    await supabase.from("academic_years").update({is_current:true}).eq("name",name);
+    setCurrentYear(name);fetchAll();showToast(name+" is now the current year!");
+  }
+
   if(authLoading)return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:"#2E5818",fontSize:16}}>Loading...</div>;
   if(!user||!profile)return <LoginScreen onLogin={(u,p)=>{setUser(u);setProfile(p);}}/>;
   if(loading)return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:"#2E5818",fontSize:16}}>Loading {currentYear}...</div>;
@@ -532,10 +554,19 @@ export default function App(){
             </table>
           </Card>
           <Card>
-            <CardHeader>Academic years</CardHeader>
+            <CardHeader action={<Btn size="sm" variant="primary" onClick={()=>openModal("new_year",{set_current:false})}>+ New Year</Btn>}>Academic years</CardHeader>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr><th style={th}>Year</th><th style={th}>Status</th></tr></thead>
-              <tbody>{academicYears.map(y=><tr key={y.id}><td style={td}>{y.name}</td><td style={td}><Badge color={y.is_current?"blue":"gray"}>{y.is_current?"Current":"Past"}</Badge></td></tr>)}</tbody>
+              <thead><tr><th style={th}>Year</th><th style={th}>Status</th><th style={th}></th></tr></thead>
+              <tbody>
+                {[...academicYears].sort((a,b)=>b.name.localeCompare(a.name)).map(y=>(
+                  <tr key={y.id}>
+                    <td style={{...td,fontWeight:600}}>{y.name}</td>
+                    <td style={td}><Badge color={y.is_current?"blue":"gray"}>{y.is_current?"★ Current":"Past"}</Badge></td>
+                    <td style={td}>{!y.is_current&&<Btn size="sm" variant="amber" onClick={()=>setYearAsCurrent(y.name)}>Set as Current</Btn>}</td>
+                  </tr>
+                ))}
+                {!academicYears.length&&<tr><td colSpan={3} style={{...td,textAlign:"center",color:"#6B6B60"}}>No academic years yet</td></tr>}
+              </tbody>
             </table>
           </Card>
         </div>}
@@ -677,6 +708,26 @@ export default function App(){
           <FG label="Email address *"><Input type="email" value={form.inv_email||""} onChange={ff("inv_email")} placeholder="staff@school.com"/></FG>
           <FG label="Role *"><Sel value={form.inv_role||""} onChange={ff("inv_role")}><option value="">Select role...</option><option value="registry_admin">Registry Admin — students only</option><option value="fee_admin">Fee Admin — fees &amp; payments only</option><option value="super_admin">Super Admin — full access</option></Sel></FG>
           <div style={{fontSize:12,color:"#6B6B60",padding:"8px 10px",background:"#F5F5F0",borderRadius:6}}>An invitation email will be sent. Staff will set their own password when they accept.</div>
+        </div>
+      </Modal>
+
+      <Modal open={modal==="new_year"} onClose={closeModal} title="Create New Academic Year" size="sm"
+        footer={<><Btn onClick={closeModal}>Cancel</Btn><Btn variant="primary" onClick={saveAcademicYear} disabled={saving}>{saving?<>Saving...</>:"Create year"}</Btn></>}>
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <FG label="Academic year name *">
+            <Input value={form.year_name||""} onChange={ff("year_name")} placeholder="e.g. 2026-2027"/>
+            <div style={{fontSize:11,color:"#6B6B60",marginTop:4}}>Format: YYYY-YYYY</div>
+          </FG>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"12px",background:"#F0F8E8",borderRadius:7,cursor:"pointer",border:"1px solid #4A7C2F33"}} onClick={()=>setForm(f=>({...f,set_current:!f.set_current}))}>
+            <div style={{width:18,height:18,border:"2px solid #2E5818",borderRadius:4,background:form.set_current?"#2E5818":"#fff",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
+              {form.set_current&&<span style={{color:"#fff",fontSize:11,fontWeight:"bold",lineHeight:1}}>✓</span>}
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:600,color:"#1B3A0C"}}>Set as current year</div>
+              <div style={{fontSize:11,color:"#6B6B60",marginTop:2}}>The sidebar selector and all new entries will default to this year. Previous current year will be set to Past.</div>
+            </div>
+          </div>
+          {academicYears.length>0&&<div style={{fontSize:12,color:"#6B6B60",padding:"8px 10px",background:"#F5F5F0",borderRadius:6}}>Existing years: <strong>{academicYears.map(y=>y.name+(y.is_current?" ★":"")).join(", ")}</strong></div>}
         </div>
       </Modal>
 
