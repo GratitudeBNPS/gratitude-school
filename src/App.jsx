@@ -233,16 +233,19 @@ function FileImportModal({onClose,onImported,academicYear}){
   const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
 
   function downloadTemplate(){
-    const headers=["First Name","Last Name","Date of Birth (YYYY-MM-DD)","Gender (Male or Female)","Class","Parent Name","Phone Number","Status (active or inactive)","Notes"];
-    const sample1=["Jean","Dupont","2015-03-15","Male","Grade 1","Marie Dupont","237123456789","active",""];
-    const sample2=["Amina","Bello","2016-07-22","Female","KG B","Ibrahim Bello","237987654321","active","New student"];
-    const sample3=["Paul","Nkeng","2014-11-05","Male","Grade 3","","237655443322","active",""];
-    const ws=XLSX.utils.aoa_to_sheet([headers,sample1,sample2,sample3]);
-    // Column widths
-    ws["!cols"]=[{wch:14},{wch:14},{wch:22},{wch:20},{wch:10},{wch:18},{wch:16},{wch:22},{wch:20}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,"Students",ws);
-    XLSX.writeFile(wb,"Gratitude_Student_Import_Template.xlsx");
+    const rows=[
+      ["First Name","Last Name","Date of Birth (YYYY-MM-DD)","Gender (Male or Female)","Class","Parent Name","Phone Number","Status (active or inactive)","Notes"],
+      ["Jean","Dupont","2015-03-15","Male","Grade 1","Marie Dupont","237123456789","active",""],
+      ["Amina","Bello","2016-07-22","Female","KG B","Ibrahim Bello","237987654321","active","New student"],
+      ["Paul","Nkeng","2014-11-05","Male","Grade 3","","237655443322","active",""],
+    ];
+    const csv=rows.map(r=>r.map(v=>'"'+v+'"').join(',')).join('\n');
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='Gratitude_Student_Import_Template.csv';
+    document.body.appendChild(a);a.click();
+    document.body.removeChild(a);URL.revokeObjectURL(url);
   }
 
   function mapRow(row){
