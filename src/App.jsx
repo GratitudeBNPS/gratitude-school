@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { jsPDF } from "jspdf";
 import { supabase } from "./lib/supabase";
 
 const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
@@ -45,6 +46,109 @@ function Modal({open,onClose,title,size="md",footer,children}){
   );
 }
 
+function generateReceiptPDF(payment,student,balance){
+  const doc=new jsPDF({unit:"mm",format:"a5"});
+  const w=doc.internal.pageSize.getWidth();
+  const fmtAmt=n=>"XAF "+Math.round(parseFloat(n||0)).toLocaleString();
+  const methods={cash:"Cash",bank:"Bank Transfer",mobile:"Mobile Payment"};
+
+  // ── School header ──
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(13);
+  doc.setTextColor(27,58,12);
+  doc.text("GRATITUDE BILINGUAL NURSERY",w/2,18,{align:"center"});
+  doc.text("& PRIMARY SCHOOL",w/2,25,{align:"center"});
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(9);
+  doc.setTextColor(107,107,96);
+  doc.text("Official Payment Receipt",w/2,31,{align:"center"});
+
+  // ── Receipt number badge ──
+  doc.setFillColor(240,248,232);
+  doc.roundedRect(w/2-30,34,60,8,2,2,"F");
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(9);
+  doc.setTextColor(46,88,24);
+  doc.text(payment.receipt_number||"",w/2,39.5,{align:"center"});
+
+  // ── Divider ──
+  doc.setDrawColor(200,210,190);
+  doc.setLineWidth(0.4);
+  doc.line(10,45,w-10,45);
+
+  // ── Detail rows ──
+  const rows=[
+    ["Student",student?(student.first_name+" "+student.last_name):"—"],
+    ["Student ID",student&&student.student_code?student.student_code:"—"],
+    ["Class",student&&student.grade?student.grade:"—"],
+    ["Academic Year",payment.academic_year||"—"],
+    ["Fee",payment.fee_name||"General payment"],
+    ["Method",methods[payment.method]||payment.method||"—"],
+    ["Date",payment.payment_date||"—"],
+    ["Received by",payment.received_by||"Admin"],
+  ];
+  if(payment.notes)rows.push(["Notes",payment.notes]);
+
+  let y=53;
+  rows.forEach(function(row){
+    const label=row[0];const value=row[1];
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(107,107,96);
+    doc.text(label,12,y);
+    doc.setFont("helvetica","bold");
+    doc.setTextColor(24,24,26);
+    const valStr=String(value||"—");
+    doc.text(valStr,w-12,y,{align:"right",maxWidth:90});
+    doc.setDrawColor(235,235,225);
+    doc.setLineWidth(0.2);
+    doc.line(12,y+2.5,w-12,y+2.5);
+    y+=8;
+  });
+
+  // ── Amount paid ──
+  y+=3;
+  doc.setDrawColor(46,88,24);
+  doc.setLineWidth(0.6);
+  doc.line(12,y,w-12,y);
+  y+=7;
+  doc.setFont("helvetica","bold");
+  doc.setFontSize(13);
+  doc.setTextColor(27,58,12);
+  doc.text("Amount Paid",12,y);
+  doc.text(fmtAmt(payment.amount_paid),w-12,y,{align:"right"});
+
+  // ── Remaining balance ──
+  y+=8;
+  doc.setFontSize(10);
+  var balNum=parseFloat(balance||0);
+  doc.setTextColor(balNum<=0?46:185,balNum<=0?88:28,balNum<=0?24:28);
+  doc.text("Remaining Balance",12,y);
+  doc.text(fmtAmt(balance),w-12,y,{align:"right"});
+
+  // ── Correction note ──
+  if(payment.edited_at){
+    y+=8;
+    doc.setFont("helvetica","italic");
+    doc.setFontSize(8);
+    doc.setTextColor(158,107,8);
+    doc.text("This receipt was corrected on "+String(payment.edited_at).slice(0,10)+" by "+(payment.edited_by||"Admin"),w/2,y,{align:"center"});
+  }
+
+  // ── Footer ──
+  y+=10;
+  doc.setLineWidth(0.3);
+  doc.setDrawColor(224,224,212);
+  doc.line(12,y,w-12,y);
+  y+=6;
+  doc.setFont("helvetica","italic");
+  doc.setFontSize(7.5);
+  doc.setTextColor(107,107,96);
+  doc.text("Official receipt — Gratitude Bilingual Nursery & Primary School",w/2,y,{align:"center"});
+
+  return doc;
+}
+
 function Receipt({payment,student,balance}){
   const rows=[["Student",student?`${student.first_name} ${student.last_name}`:"—"],["Student ID",student?.student_code||"—"],["Class",student?.grade||"—"],["Academic Year",payment.academic_year||"—"],["Fee",payment.fee_name||"General payment"],["Payment method",METHODS[payment.method]||payment.method],["Date",payment.payment_date||payment.date],["Received by",payment.received_by||"Admin"],...(payment.notes?[["Notes",payment.notes]]:[])];
   const txt=`*GRATITUDE BILINGUAL NURSERY & PRIMARY SCHOOL*\nPayment Receipt\nReceipt: ${payment.receipt_number}\n\nStudent: ${student?.first_name} ${student?.last_name}\nID: ${student?.student_code}\nClass: ${student?.grade}\nAcademic Year: ${payment.academic_year}\nFee: ${payment.fee_name||"General"}\nDate: ${payment.payment_date}\nMethod: ${METHODS[payment.method]||payment.method}\n\nAmount paid: ${fmt(payment.amount_paid)}\nBalance remaining: ${fmt(balance)}\n\nGratitude Bilingual Nursery & Primary School - Official Receipt`;
@@ -66,7 +170,22 @@ function Receipt({payment,student,balance}){
         <div style={{textAlign:"center",marginTop:12,fontSize:11,color:"#6B6B60",borderTop:"1px dashed #E0E0D4",paddingTop:10}}>Official receipt — Gratitude Bilingual Nursery & Primary School</div>
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14}}>
-        <Btn variant="primary" onClick={()=>window.open("https://wa.me/?text="+encodeURIComponent(txt),"_blank")}>Share via WhatsApp</Btn>
+        <Btn variant="primary" onClick={async()=>{
+          const doc=generateReceiptPDF(payment,student,balance);
+          const phone=(student&&student.phone?student.phone:"").replace(/[^0-9]/g,"");
+          const fileName="Receipt-"+(payment.receipt_number||"receipt")+".pdf";
+          try{
+            const blob=doc.output("blob");
+            const file=new File([blob],fileName,{type:"application/pdf"});
+            if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+              await navigator.share({files:[file],title:fileName});
+              return;
+            }
+          }catch(shareErr){console.log("Web Share API not available");}
+          doc.save(fileName);
+          if(phone){window.open("https://wa.me/"+phone,"_blank");}
+        }}>Share PDF via WhatsApp</Btn>
+        <Btn variant="blue" onClick={()=>{generateReceiptPDF(payment,student,balance).save("Receipt-"+(payment.receipt_number||"receipt")+".pdf");}}>Download PDF</Btn>
         <Btn onClick={()=>window.print()}>Print</Btn>
       </div>
     </div>
