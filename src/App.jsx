@@ -169,17 +169,18 @@ function Receipt({payment,student,balance}){
         </div>
         <div style={{textAlign:"center",marginTop:12,fontSize:11,color:"#6B6B60",borderTop:"1px dashed #E0E0D4",paddingTop:10}}>Official receipt — Gratitude Bilingual Nursery & Primary School</div>
       </div>
-      <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14}}>
-        <Btn variant="primary" onClick={()=>{
-          const doc=generateReceiptPDF(payment,student,balance);
-          const phone=(student&&student.phone?student.phone:"").replace(/[^0-9]/g,"");
-          const fileName="Receipt-"+(payment.receipt_number||"receipt")+".pdf";
-          doc.save(fileName);
-          const waUrl=phone?"https://wa.me/"+phone:"https://wa.me/";
-          setTimeout(()=>window.open(waUrl,"_blank"),400);
-        }}>Share PDF via WhatsApp</Btn>
-        <Btn variant="blue" onClick={()=>{generateReceiptPDF(payment,student,balance).save("Receipt-"+(payment.receipt_number||"receipt")+".pdf");}}>Download PDF</Btn>
-        <Btn onClick={()=>window.print()}>Print</Btn>
+      <div style={{marginTop:14}}>
+        <div style={{fontSize:12,color:"#6B6B60",textAlign:"center",marginBottom:10,padding:"8px 12px",background:"#F5F5F0",borderRadius:7}}>
+          <strong>To share:</strong> 1. Download the PDF below &nbsp;→&nbsp; 2. Open WhatsApp &amp; attach it
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+          <Btn variant="primary" onClick={()=>generateReceiptPDF(payment,student,balance).save("Receipt-"+(payment.receipt_number||"receipt")+".pdf")}>📥 Download PDF</Btn>
+          {student&&student.phone
+            ?<a href={"https://wa.me/"+(student.phone||"").replace(/[^0-9]/g,"")} target="_blank" rel="noreferrer" style={{padding:"7px 14px",fontSize:13,borderRadius:7,background:"#25D366",color:"#fff",fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>💬 WhatsApp {student.first_name||"Parent"}</a>
+            :<a href="https://wa.me/" target="_blank" rel="noreferrer" style={{padding:"7px 14px",fontSize:13,borderRadius:7,background:"#25D366",color:"#fff",fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>💬 Open WhatsApp</a>
+          }
+          <Btn onClick={()=>window.print()}>🖨 Print</Btn>
+        </div>
       </div>
     </div>
   );
