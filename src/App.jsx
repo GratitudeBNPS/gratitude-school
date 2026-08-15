@@ -170,20 +170,13 @@ function Receipt({payment,student,balance}){
         <div style={{textAlign:"center",marginTop:12,fontSize:11,color:"#6B6B60",borderTop:"1px dashed #E0E0D4",paddingTop:10}}>Official receipt — Gratitude Bilingual Nursery & Primary School</div>
       </div>
       <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:14}}>
-        <Btn variant="primary" onClick={async()=>{
+        <Btn variant="primary" onClick={()=>{
           const doc=generateReceiptPDF(payment,student,balance);
           const phone=(student&&student.phone?student.phone:"").replace(/[^0-9]/g,"");
           const fileName="Receipt-"+(payment.receipt_number||"receipt")+".pdf";
-          try{
-            const blob=doc.output("blob");
-            const file=new File([blob],fileName,{type:"application/pdf"});
-            if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-              await navigator.share({files:[file],title:fileName});
-              return;
-            }
-          }catch(shareErr){console.log("Web Share API not available");}
           doc.save(fileName);
-          if(phone){window.open("https://wa.me/"+phone,"_blank");}
+          const waUrl=phone?"https://wa.me/"+phone:"https://wa.me/";
+          setTimeout(()=>window.open(waUrl,"_blank"),400);
         }}>Share PDF via WhatsApp</Btn>
         <Btn variant="blue" onClick={()=>{generateReceiptPDF(payment,student,balance).save("Receipt-"+(payment.receipt_number||"receipt")+".pdf");}}>Download PDF</Btn>
         <Btn onClick={()=>window.print()}>Print</Btn>
