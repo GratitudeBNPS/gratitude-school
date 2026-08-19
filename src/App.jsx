@@ -52,101 +52,81 @@ function Modal({open,onClose,title,size="md",footer,children}){
 function generateReceiptPDF(payment,student,balance){
   const doc=new jsPDF({unit:"mm",format:"a5"});
   const w=doc.internal.pageSize.getWidth();
+  const h=doc.internal.pageSize.getHeight();
   const fmtAmt=n=>"XAF "+Math.round(parseFloat(n||0)).toLocaleString();
   const methods={cash:"Cash",bank:"Bank Transfer",mobile:"Mobile Payment"};
+  let y=12;
 
-  // ── School header ──
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(13);
-  doc.setTextColor(27,58,12);
-  doc.text("GRATITUDE BILINGUAL NURSERY",w/2,18,{align:"center"});
-  doc.text("& PRIMARY SCHOOL",w/2,25,{align:"center"});
-  doc.setFont("helvetica","normal");
-  doc.setFontSize(9);
-  doc.setTextColor(107,107,96);
-  doc.text("Official Payment Receipt",w/2,31,{align:"center"});
+  // Outer card border
+  doc.setDrawColor(220,220,210);doc.setLineWidth(0.6);
+  doc.roundedRect(8,8,w-16,h-16,3,3,"S");
 
-  // ── Receipt number badge ──
-  doc.setFillColor(240,248,232);
-  doc.roundedRect(w/2-30,34,60,8,2,2,"F");
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(9);
-  doc.setTextColor(46,88,24);
-  doc.text(payment.receipt_number||"",w/2,39.5,{align:"center"});
+  // School name
+  doc.setFont("helvetica","bold");doc.setFontSize(15);doc.setTextColor(27,58,12);
+  doc.text("Gratitude Bilingual Nursery",w/2,y,{align:"center"});y+=7;
+  doc.text("& Primary School",w/2,y,{align:"center"});y+=8;
 
-  // ── Divider ──
-  doc.setDrawColor(200,210,190);
-  doc.setLineWidth(0.4);
-  doc.line(10,45,w-10,45);
+  // Subtitle
+  doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,107,96);
+  doc.text("Official Payment Receipt",w/2,y,{align:"center"});y+=8;
 
-  // ── Detail rows ──
+  // Receipt number badge
+  const rNum=payment.receipt_number||"";
+  const bw=Math.max(doc.getTextWidth(rNum)+12,30);
+  doc.setFillColor(240,248,232);doc.roundedRect(w/2-bw/2,y-4,bw,8,2,2,"F");
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(46,88,24);
+  doc.text(rNum,w/2,y+1,{align:"center"});y+=12;
+
+  // Divider
+  doc.setDrawColor(220,220,210);doc.setLineWidth(0.3);doc.line(14,y,w-14,y);y+=8;
+
+  // Detail rows
   const rows=[
     ["Student",student?(student.first_name+" "+student.last_name):"—"],
-    ["Student ID",student&&student.student_code?student.student_code:"—"],
-    ["Class",student&&student.grade?student.grade:"—"],
+    ["Student ID",(student&&student.student_code)||"—"],
+    ["Class",(student&&student.grade)||"—"],
     ["Academic Year",payment.academic_year||"—"],
     ["Fee",payment.fee_name||"General payment"],
-    ["Method",methods[payment.method]||payment.method||"—"],
+    ["Payment method",methods[payment.method]||payment.method||"—"],
     ["Date",payment.payment_date||"—"],
     ["Received by",payment.received_by||"Admin"],
   ];
   if(payment.notes)rows.push(["Notes",payment.notes]);
 
-  let y=53;
-  rows.forEach(function(row){
-    const label=row[0];const value=row[1];
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(107,107,96);
-    doc.text(label,12,y);
-    doc.setFont("helvetica","bold");
-    doc.setTextColor(24,24,26);
-    const valStr=String(value||"—");
-    doc.text(valStr,w-12,y,{align:"right",maxWidth:90});
-    doc.setDrawColor(235,235,225);
-    doc.setLineWidth(0.2);
-    doc.line(12,y+2.5,w-12,y+2.5);
-    y+=8;
+  rows.forEach(function(r){
+    doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(120,120,110);
+    doc.text(r[0],16,y);
+    doc.setFont("helvetica","bold");doc.setTextColor(24,24,26);
+    doc.text(String(r[1]||"—"),w-16,y,{align:"right",maxWidth:88});
+    doc.setDrawColor(238,238,228);doc.setLineWidth(0.2);doc.line(16,y+2.5,w-16,y+2.5);
+    y+=9;
   });
 
-  // ── Amount paid ──
+  // Amount paid
   y+=3;
-  doc.setDrawColor(46,88,24);
-  doc.setLineWidth(0.6);
-  doc.line(12,y,w-12,y);
-  y+=7;
-  doc.setFont("helvetica","bold");
-  doc.setFontSize(13);
-  doc.setTextColor(27,58,12);
-  doc.text("Amount Paid",12,y);
-  doc.text(fmtAmt(payment.amount_paid),w-12,y,{align:"right"});
+  doc.setDrawColor(46,88,24);doc.setLineWidth(0.6);doc.line(16,y,w-16,y);y+=8;
+  doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(27,58,12);
+  doc.text("Amount paid",16,y);
+  doc.text(fmtAmt(payment.amount_paid),w-16,y,{align:"right"});
 
-  // ── Remaining balance ──
-  y+=8;
+  // Balance
+  y+=9;
+  const bal=parseFloat(balance||0);
   doc.setFontSize(10);
-  var balNum=parseFloat(balance||0);
-  doc.setTextColor(balNum<=0?46:185,balNum<=0?88:28,balNum<=0?24:28);
-  doc.text("Remaining Balance",12,y);
-  doc.text(fmtAmt(balance),w-12,y,{align:"right"});
+  doc.setTextColor(bal<=0?46:185,bal<=0?88:28,bal<=0?24:28);
+  doc.text("Remaining balance",16,y);
+  doc.text(fmtAmt(balance),w-16,y,{align:"right"});
 
-  // ── Correction note ──
+  // Correction note
   if(payment.edited_at){
-    y+=8;
-    doc.setFont("helvetica","italic");
-    doc.setFontSize(8);
-    doc.setTextColor(158,107,8);
-    doc.text("This receipt was corrected on "+String(payment.edited_at).slice(0,10)+" by "+(payment.edited_by||"Admin"),w/2,y,{align:"center"});
+    y+=8;doc.setFont("helvetica","italic");doc.setFontSize(7.5);doc.setTextColor(158,107,8);
+    doc.text("Corrected on "+String(payment.edited_at).slice(0,10)+" by "+(payment.edited_by||"Admin"),w/2,y,{align:"center"});
   }
 
-  // ── Footer ──
+  // Footer
   y+=10;
-  doc.setLineWidth(0.3);
-  doc.setDrawColor(224,224,212);
-  doc.line(12,y,w-12,y);
-  y+=6;
-  doc.setFont("helvetica","italic");
-  doc.setFontSize(7.5);
-  doc.setTextColor(107,107,96);
+  doc.setDrawColor(220,220,210);doc.setLineWidth(0.3);doc.line(16,y,w-16,y);y+=6;
+  doc.setFont("helvetica","italic");doc.setFontSize(7.5);doc.setTextColor(120,120,110);
   doc.text("Official receipt — Gratitude Bilingual Nursery & Primary School",w/2,y,{align:"center"});
 
   return doc;
