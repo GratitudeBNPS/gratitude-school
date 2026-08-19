@@ -735,7 +735,7 @@ export default function App(){
     setLoading(false);
   }
 
-  const totalDue=useCallback(id=>{const st=students.find(x=>x.id===id);if(!st)return 0;return fees.filter(f=>f.grades==="all"||f.grades===st.grade).reduce((s,f)=>s+parseFloat(f.amount||0),0);},[students,fees]);
+  const totalDue=useCallback(id=>{const st=students.find(x=>x.id===id);if(!st)return 0;return fees.filter(f=>!f.is_optional&&(f.grades==="all"||f.grades===st.grade)).reduce((s,f)=>s+parseFloat(f.amount||0),0);},[students,fees]);
   const totalPaid=useCallback(id=>payments.filter(p=>p.student_id===id).reduce((s,p)=>s+parseFloat(p.amount_paid||0),0),[payments]);
   const balance=useCallback(id=>totalDue(id)-totalPaid(id),[totalDue,totalPaid]);
 
