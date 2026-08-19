@@ -731,7 +731,7 @@ export default function App(){
       supabase.from("payments").select("*").eq("academic_year",currentYear).order("created_at",{ascending:false}),
       supabase.from("academic_years").select("*").order("name"),
     ]);
-    setStudents((s.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setFees((f.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setPayments((p.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setAcademicYears(ay.data||[]);
+    setStudents((s.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setFees((f.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setPayments((p.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));const ayList=ay.data||[];setAcademicYears(ayList);const saved=localStorage.getItem("gratitude_year");const currentInDB=ayList.find(y=>y.is_current);if(!saved&&currentInDB){setCurrentYear(currentInDB.name);localStorage.setItem("gratitude_year",currentInDB.name);}else if(saved&&ayList.find(y=>y.name===saved)){setCurrentYear(saved);}else if(currentInDB){setCurrentYear(currentInDB.name);localStorage.setItem("gratitude_year",currentInDB.name);}
     if(profile?.role==="super_admin"){const{data:u}=await supabase.from("profiles").select("*").order("full_name");setAllUsers(u||[]);}
     setLoading(false);
   }
@@ -838,7 +838,7 @@ export default function App(){
         </div>
         <div style={{padding:"8px 10px",borderBottom:"1px solid rgba(255,255,255,.1)"}}>
           <div style={{fontSize:10,color:"rgba(255,255,255,.4)",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.05em"}}>Academic Year</div>
-          <select value={currentYear} onChange={e=>setCurrentYear(e.target.value)} style={{width:"100%",padding:"5px 8px",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",borderRadius:5,color:"#fff",fontSize:12,cursor:"pointer"}}>
+          <select value={currentYear} onChange={e=>{setCurrentYear(e.target.value);localStorage.setItem("gratitude_year",e.target.value);}} style={{width:"100%",padding:"5px 8px",background:"rgba(255,255,255,.1)",border:"1px solid rgba(255,255,255,.2)",borderRadius:5,color:"#fff",fontSize:12,cursor:"pointer"}}>
             {academicYears.map(y=><option key={y.id} value={y.name} style={{background:"#1B3A0C"}}>{y.name}{y.is_current?" ★":""}</option>)}
           </select>
         </div>
