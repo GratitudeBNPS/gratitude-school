@@ -355,7 +355,7 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
               <th style={th}>First Name</th><th style={th}>Last Name</th>
               <th style={th}>Gender</th>
               <th style={th}>Student ID</th>
-              {selectedGrade==="all"&&<th style={th}>Class</th>}
+              <th style={th}>Class</th>
               {!showFees&&<><th style={th}>Parent / Guardian</th><th style={th}>Phone</th></>}
               {showFees&&<><th style={{...th,textAlign:"right"}}>Total Fees</th><th style={{...th,textAlign:"right"}}>Paid</th><th style={{...th,textAlign:"right"}}>Balance</th></>}
               <th style={th}>Status</th>
@@ -368,7 +368,7 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
                   <td style={{...td,fontWeight:600,color:"#1B3A0C"}}>{s.first_name}</td><td style={td}>{s.last_name}</td>
                   <td style={td}>{s.gender||"—"}</td>
                   <td style={{...td,fontSize:11,color:"#6B6B60"}}>{s.student_code||"—"}</td>
-                  {selectedGrade==="all"&&<td style={td}><Badge color="blue">{s.grade}</Badge></td>}
+                  <td style={td}><Badge color="blue">{s.grade}</Badge></td>
                   {!showFees&&<><td style={td}>{s.parent_name||"—"}</td><td style={{...td,fontSize:11}}>{s.phone||"—"}</td></>}
                   {showFees&&<>
                     <td style={{...td,textAlign:"right"}}>{fmtAmt(totalDue(s.id))}</td>
@@ -383,7 +383,7 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
                 const tp=filtered.reduce((s,x)=>s+totalPaid(x.id),0);
                 const tb=filtered.reduce((s,x)=>s+balance(x.id),0);
                 return<tr style={{background:"#F0F8E8",borderTop:"2px solid #4A7C2F44"}}>
-                  <td colSpan={4+(selectedGrade==="all"?1:0)} style={{...td,fontWeight:700,color:"#1B3A0C"}}>TOTALS — {filtered.length} students</td>
+                  <td colSpan={5} style={{...td,fontWeight:700,color:"#1B3A0C"}}>TOTALS — {filtered.length} students</td>
                   <td style={{...td,textAlign:"right",fontWeight:700}}>{fmtAmt(tf)}</td>
                   <td style={{...td,textAlign:"right",fontWeight:700,color:"#2E5818"}}>{fmtAmt(tp)}</td>
                   <td style={{...td,textAlign:"right",fontWeight:700,color:tb<=0?"#2E5818":"#B91C1C"}}>{fmtAmt(tb)}</td>
