@@ -496,7 +496,9 @@ function FileImportModal({onClose,onImported,academicYear}){
       academic_year:academicYear,
       notes:s.notes||null,
     }));
-    const{error}=await supabase.from("students").insert(payload);
+    const{data:existing}=await supabase.from("students").select("first_name,last_name,grade").eq("academic_year",academicYear);
+    const existSet=new Set((existing||[]).map(s=>s.first_name.toLowerCase()+"|"+s.last_name.toLowerCase()+"|"+s.grade));
+    const{error}=await supabase.from("students").insert(newOnly);
     setSaving(false);
     if(error){alert("Error saving: "+error.message);return;}
     onImported(valid.length);
