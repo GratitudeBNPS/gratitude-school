@@ -882,7 +882,7 @@ export default function App(){
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead><tr><th style={th}>Student</th><th style={th}>Amount</th><th style={th}>Date</th><th style={th}>Method</th></tr></thead>
                 <tbody>
-                  {payments.slice(0,7).map(p=>{const st=students.find(x=>x.id===p.student_id);return <tr key={p.id}><td style={td}>{st?`${st.first_name} ${st.last_name}`:"—"}</td><td style={{...td,color:"#2E5818",fontWeight:600}}>{fmt(p.amount_paid)}</td><td style={td}>{p.payment_date}</td><td style={td}><Badge color="gray">{METHODS[p.method]||p.method}</Badge></td></tr>;})}
+                  {payments.slice(0,7).map(p=>{const st=students.find(x=>x.id===p.student_id);return <tr key={p.id}><td style={td}>{st?st.first_name:"—"}</td><td style={td}>{st?st.last_name:"—"}</td><td style={{...td,color:"#2E5818",fontWeight:600}}>{fmt(p.amount_paid)}</td><td style={td}>{p.payment_date}</td><td style={td}><Badge color="gray">{METHODS[p.method]||p.method}</Badge></td></tr>;})}
                   {!payments.length&&<tr><td colSpan={4} style={{...td,textAlign:"center",color:"#6B6B60"}}>No payments yet</td></tr>}
                 </tbody>
               </table>
@@ -895,7 +895,7 @@ export default function App(){
               <tbody>
                 {activeStudents.filter(s=>balance(s.id)>0).sort((a,b)=>balance(b.id)-balance(a.id)).map(s=>(
                   <tr key={s.id} style={{cursor:"pointer"}} onClick={()=>openModal("profile",{student:s})}>
-                    <td style={td}><strong>{s.first_name}</td><td style={td}>{s.last_name}</strong></td><td style={td}>{s.grade}</td><td style={td}>{fmt(totalDue(s.id))}</td><td style={{...td,color:"#2E5818"}}>{fmt(totalPaid(s.id))}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(s.id))}</td>
+                    <td style={td}>{s.first_name}</td><td style={td}>{s.last_name}</td><td style={td}>{s.grade}</td><td style={td}>{fmt(totalDue(s.id))}</td><td style={{...td,color:"#2E5818"}}>{fmt(totalPaid(s.id))}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(s.id))}</td>
                     {can(profile.role,"payments")&&<td style={td}><Btn size="sm" variant="amber" onClick={e=>{e.stopPropagation();openModal("payment",{student_id:s.id});}}>Pay</Btn></td>}
                   </tr>
                 ))}
@@ -927,7 +927,7 @@ export default function App(){
                   const bal=balance(st.id);
                   return <tr key={st.id} style={{cursor:"pointer"}} onClick={()=>openModal("profile",{student:st})}>
                     <td style={{...td,fontFamily:"monospace",fontSize:12,color:"#6B6B60"}}>{st.student_code}</td>
-                    <td style={td}><strong>{st.first_name} {st.last_name}</strong></td>
+                    <td style={td}><strong>{st.first_name}</strong></td><td style={td}><strong>{st.last_name}</strong></td>
                     <td style={td}>{st.grade}</td><td style={td}>{st.parent_name||"—"}</td>
                     <td style={{...td,fontSize:12}}>{st.phone||"—"}</td>
                     <td style={td}><Badge color={bal<=0?"green":bal<50000?"amber":"red"}>{fmt(bal)}</Badge></td>
@@ -979,7 +979,7 @@ export default function App(){
                   const st=students.find(x=>x.id===p.student_id);
                   return <tr key={p.id} style={{background:p.edited_at?"#FFFBF0":""}}>
                     <td style={{...td,fontFamily:"monospace",fontSize:12,color:"#6B6B60"}}>{p.receipt_number}{p.edited_at&&<span style={{color:"#9E6B08",marginLeft:4}}>✏</span>}</td>
-                    <td style={{...td,color:"#2E5818",fontWeight:500,cursor:"pointer"}} onClick={()=>openModal("profile",{student:st})}>{st?`${st.first_name} ${st.last_name}`:"—"}</td>
+                    <td style={{...td,color:"#2E5818",fontWeight:500,cursor:"pointer"}} onClick={()=>openModal("profile",{student:st})}>{st?st.first_name:"—"}</td><td style={td}>{st?st.last_name:"—"}</td>
                     <td style={td}>{st?st.grade:"—"}</td><td style={{...td,fontSize:12}}>{p.fee_name||"—"}</td>
                     <td style={{...td,fontWeight:600}}>{fmt(p.amount_paid)}</td><td style={td}>{p.payment_date}</td>
                     <td style={td}><Badge color="gray">{METHODS[p.method]||p.method}</Badge></td>
@@ -1017,7 +1017,7 @@ export default function App(){
               <thead><tr><th style={th}>Student</th><th style={th}>Class</th><th style={th}>Parent contact</th><th style={th}>Balance due</th>{can(profile.role,"payments")&&<th style={th}></th>}</tr></thead>
               <tbody>
                 {activeStudents.filter(x=>balance(x.id)>0).sort((a,b)=>balance(b.id)-balance(a.id)).map(st=>(
-                  <tr key={st.id}><td style={td}><strong>{st.first_name} {st.last_name}</strong></td><td style={td}>{st.grade}</td><td style={{...td,fontSize:12}}>{st.phone||"—"}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(st.id))}</td>
+                  <tr key={st.id}><td style={td}><strong>{st.first_name}</strong></td><td style={td}><strong>{st.last_name}</strong></td><td style={td}>{st.grade}</td><td style={{...td,fontSize:12}}>{st.phone||"—"}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(st.id))}</td>
                   {can(profile.role,"payments")&&<td style={td}><Btn size="sm" variant="amber" onClick={()=>openModal("payment",{student_id:st.id})}>Record payment</Btn></td>}
                   </tr>
                 ))}
