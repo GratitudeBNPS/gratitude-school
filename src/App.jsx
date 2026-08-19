@@ -230,13 +230,9 @@ function Receipt({payment,student,balance}){
           <strong>To share:</strong> 1. Download the PDF below &nbsp;→&nbsp; 2. Open WhatsApp &amp; attach it
         </div>
         <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-          <Btn variant="primary" onClick={()=>generateReceiptPDF(payment,student,balance).save("Receipt-"+(payment.receipt_number||"receipt")+".pdf")}>📥 Download PDF</Btn>
-          {student&&student.phone
-            ?<a href={"https://wa.me/"+(student.phone||"").replace(/[^0-9]/g,"")} target="_blank" rel="noreferrer" style={{padding:"7px 14px",fontSize:13,borderRadius:7,background:"#25D366",color:"#fff",fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>💬 WhatsApp {student.first_name||"Parent"}</a>
-            :<a href="https://wa.me/" target="_blank" rel="noreferrer" style={{padding:"7px 14px",fontSize:13,borderRadius:7,background:"#25D366",color:"#fff",fontWeight:600,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>💬 Open WhatsApp</a>
-          }
+          <Btn variant="primary" onClick={shareWhatsApp}>💬 Share via WhatsApp</Btn>
+          <Btn variant="blue" onClick={downloadPDF}>📥 Download PDF</Btn>
           <Btn onClick={()=>window.print()}>🖨 Print</Btn>
-        </div>
       </div>
     </div>
   );
