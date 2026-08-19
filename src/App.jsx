@@ -407,11 +407,11 @@ function FileImportModal({onClose,onImported,academicYear}){
   const GRADES=["Pre Nursery","Nursery 1","Nursery 2","Primary 1","Primary 2","Primary 3","Primary 4","Primary 5","Primary 6"];
 
   function downloadTemplate(){
-    const grades=['KG A','KG B','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'];
+    const grades=['Pre Nursery','Nursery 1','Primary 1','Primary 2','Primary 3','Primary 4','Primary 5','Primary 6'];
     const note='# Valid Gender: Male, Female | Valid Class: '+grades.join(', ')+' | Valid Status: active, inactive';
     const headers=['First Name','Last Name','Date of Birth (YYYY-MM-DD)','Gender','Class','Parent Name','Phone Number','Status','Notes'];
-    const sample1=['Jean','Dupont','2015-03-15','Male','Grade 1','Marie Dupont','237123456789','active',''];
-    const sample2=['Amina','Bello','2016-07-22','Female','KG B','Ibrahim Bello','237987654321','active',''];
+    const sample1=['Jean','Dupont','2015-03-15','Male','Primary 1','Marie Dupont','237123456789','active',''];
+    const sample2=['Amina','Bello','2016-07-22','Female','Nursery 1','Ibrahim Bello','237987654321','active',''];
     const rows=[note,headers,sample1,sample2].map((r,i)=>i===0?r:r.map(v=>'"'+v+'"').join(','));
     const blob=new Blob([rows.join('\n')],{type:'text/csv'});
     const url=URL.createObjectURL(blob);
@@ -530,7 +530,7 @@ function FileImportModal({onClose,onImported,academicYear}){
       {!students.length&&!err&&<div style={{padding:"10px 14px",background:"#FAFAF8",borderRadius:7,border:"1px solid #E0E0D4",marginBottom:14}}>
         <div style={{fontSize:11,fontWeight:600,color:"#6B6B60",textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:6}}>Required columns in your file</div>
         <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-          {[["First Name","required"],["Last Name","required"],["Class","required — KG A, KG B, Grade 1–6"],["Date of Birth","YYYY-MM-DD"],["Gender","Male or Female"],["Parent Name","optional"],["Phone Number","optional"],["Status","active or inactive"],["Notes","optional"]].map(([col,note])=>(
+          {[["First Name","required"],["Last Name","required"],["Class","required — Pre Nursery, Nursery 1, Primary 1–6"],["Date of Birth","YYYY-MM-DD"],["Gender","Male or Female"],["Parent Name","optional"],["Phone Number","optional"],["Status","active or inactive"],["Notes","optional"]].map(([col,note])=>(
             <div key={col} style={{fontSize:11,padding:"3px 8px",borderRadius:4,background:note==="required"||note.startsWith("required")?"#F0F8E8":"#F0F0E8",color:note==="required"||note.startsWith("required")?"#2E5818":"#6B6B60",border:"1px solid "+(note==="required"||note.startsWith("required")?"#4A7C2F33":"#E0E0D4")}}>
               <strong>{col}</strong>{note!=="required"&&<span style={{fontWeight:400}}> — {note}</span>}
             </div>
