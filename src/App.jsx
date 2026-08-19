@@ -697,7 +697,7 @@ export default function App(){
   const [fees,setFees]=useState([]);
   const [payments,setPayments]=useState([]);
   const [academicYears,setAcademicYears]=useState([]);
-  const [currentYear,setCurrentYear]=useState("2025-2026");
+  const [currentYear,setCurrentYear]=useState(localStorage.getItem("gratitude_year")||"2025-2026");
   const [allUsers,setAllUsers]=useState([]);
   const [loading,setLoading]=useState(true);
   const [modal,setModal]=useState(null);
