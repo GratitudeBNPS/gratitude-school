@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "./lib/supabase";
 
-const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+const GRADES=["Pre Nursery","Nursery 1","Nursery 2","Primary 1","Primary 2","Primary 3","Primary 4","Primary 5","Primary 6"];
 const METHODS={cash:"Cash",bank:"Bank transfer",mobile:"Mobile payment"};
 const CATS={tuition:"Tuition",activity:"Activity",transport:"Transport",meals:"Meals",uniform:"Uniform",other:"Other"};
 const TERMS=["Term 1","Term 2","Term 3","Annual","Monthly"];
@@ -225,7 +225,7 @@ function LoginScreen({onLogin}){
 }
 
 function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid,balance}){
-  const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+  const GRADES=["Pre Nursery","Nursery 1","Nursery 2","Primary 1","Primary 2","Primary 3","Primary 4","Primary 5","Primary 6"];
   const [selectedGrade,setSelectedGrade]=useState("all");
   const [showFees,setShowFees]=useState(false);
   const today_str=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
@@ -404,7 +404,7 @@ function FileImportModal({onClose,onImported,academicYear}){
   const [err,setErr]=useState("");
   const [fileName,setFileName]=useState("");
   const fileRef=useRef();
-  const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+  const GRADES=["Pre Nursery","Nursery 1","Nursery 2","Primary 1","Primary 2","Primary 3","Primary 4","Primary 5","Primary 6"];
 
   function downloadTemplate(){
     const grades=['KG A','KG B','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'];
