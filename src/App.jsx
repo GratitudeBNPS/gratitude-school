@@ -352,7 +352,7 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead><tr>
               <th style={{...th,width:36}}>#</th>
-              <th style={th}>Student Name</th>
+              <th style={th}>First Name</th><th style={th}>Last Name</th>
               <th style={th}>Gender</th>
               <th style={th}>Student ID</th>
               {selectedGrade==="all"&&<th style={th}>Class</th>}
@@ -365,7 +365,7 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
               {filtered.map((s,i)=>(
                 <tr key={s.id} style={{background:i%2===0?"#fff":"#FAFAF8"}}>
                   <td style={{...td,color:"#6B6B60",fontSize:11}}>{i+1}</td>
-                  <td style={{...td,fontWeight:600,color:"#1B3A0C"}}>{s.last_name}, {s.first_name}</td>
+                  <td style={{...td,fontWeight:600,color:"#1B3A0C"}}>{s.first_name}</td><td style={td}>{s.last_name}</td>
                   <td style={td}>{s.gender||"—"}</td>
                   <td style={{...td,fontSize:11,color:"#6B6B60"}}>{s.student_code||"—"}</td>
                   {selectedGrade==="all"&&<td style={td}><Badge color="blue">{s.grade}</Badge></td>}
@@ -895,7 +895,7 @@ export default function App(){
               <tbody>
                 {activeStudents.filter(s=>balance(s.id)>0).sort((a,b)=>balance(b.id)-balance(a.id)).map(s=>(
                   <tr key={s.id} style={{cursor:"pointer"}} onClick={()=>openModal("profile",{student:s})}>
-                    <td style={td}><strong>{s.first_name} {s.last_name}</strong></td><td style={td}>{s.grade}</td><td style={td}>{fmt(totalDue(s.id))}</td><td style={{...td,color:"#2E5818"}}>{fmt(totalPaid(s.id))}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(s.id))}</td>
+                    <td style={td}><strong>{s.first_name}</td><td style={td}>{s.last_name}</strong></td><td style={td}>{s.grade}</td><td style={td}>{fmt(totalDue(s.id))}</td><td style={{...td,color:"#2E5818"}}>{fmt(totalPaid(s.id))}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(s.id))}</td>
                     {can(profile.role,"payments")&&<td style={td}><Btn size="sm" variant="amber" onClick={e=>{e.stopPropagation();openModal("payment",{student_id:s.id});}}>Pay</Btn></td>}
                   </tr>
                 ))}
