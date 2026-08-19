@@ -349,9 +349,10 @@ function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid
       </Card>
       <Card>
         <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed",minWidth:900}}>
+            <colgroup><col style={{width:40}}/><col style={{width:"13%"}}/><col style={{width:"15%"}}/><col style={{width:70}}/><col style={{width:90}}/><col style={{width:90}}/><col style={{width:"16%"}}/><col style={{width:"14%"}}/><col style={{width:70}}/></colgroup>
             <thead><tr>
-              <th style={{...th,width:36}}>#</th>
+              <th style={{...th,width:40}}>#</th>
               <th style={th}>First Name</th><th style={th}>Last Name</th>
               <th style={th}>Gender</th>
               <th style={th}>Student ID</th>
