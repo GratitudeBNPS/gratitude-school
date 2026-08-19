@@ -224,6 +224,180 @@ function LoginScreen({onLogin}){
   );
 }
 
+function ClassListReport({students,payments,fees,academicYear,totalDue,totalPaid,balance}){
+  const GRADES=["KG A","KG B","Grade 1","Grade 2","Grade 3","Grade 4","Grade 5","Grade 6"];
+  const [selectedGrade,setSelectedGrade]=useState("all");
+  const [showFees,setShowFees]=useState(false);
+  const today_str=new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"long",year:"numeric"});
+  const gradeOptions=["all",...GRADES.filter(g=>students.some(s=>s.grade===g))];
+  const filtered=[...students]
+    .filter(s=>selectedGrade==="all"||s.grade===selectedGrade)
+    .sort((a,b)=>(a.last_name+" "+a.first_name).toLowerCase().localeCompare((b.last_name+" "+b.first_name).toLowerCase()));
+  function fmtAmt(n){return"XAF "+Math.round(parseFloat(n||0)).toLocaleString();}
+
+  function dlExcel(){
+    const gradeLabel=selectedGrade==="all"?"All Classes":selectedGrade;
+    const title=["Gratitude Bilingual Nursery & Primary School"];
+    const sub=["Class List — "+gradeLabel+" — "+academicYear+" — Generated: "+today_str];
+    const blank=[];
+    let headers,rows;
+    if(!showFees){
+      headers=["#","Student Name","Gender","Student ID","Parent / Guardian","Phone","Status"];
+      rows=filtered.map((s,i)=>[i+1,s.last_name+", "+s.first_name,s.gender||"—",s.student_code||"—",s.parent_name||"—",s.phone||"—",s.status==="active"?"Active":"Inactive"]);
+      rows.push([]);rows.push(["","Total Students: "+filtered.length]);
+    }else{
+      headers=["#","Student Name","Gender","Student ID","Total Fees (XAF)","Paid (XAF)","Balance (XAF)","Status"];
+      rows=filtered.map((s,i)=>[i+1,s.last_name+", "+s.first_name,s.gender||"—",s.student_code||"—",Math.round(totalDue(s.id)),Math.round(totalPaid(s.id)),Math.round(balance(s.id)),s.status==="active"?"Active":"Inactive"]);
+      const tf=filtered.reduce((sum,s)=>sum+totalDue(s.id),0);
+      const tp=filtered.reduce((sum,s)=>sum+totalPaid(s.id),0);
+      const tb=filtered.reduce((sum,s)=>sum+balance(s.id),0);
+      rows.push([]);rows.push(["","TOTALS","","",Math.round(tf),Math.round(tp),Math.round(tb)]);
+      rows.push(["","Total Students: "+filtered.length]);
+    }
+    const ws=XLSX.utils.aoa_to_sheet([title,sub,blank,headers,...rows]);
+    ws["!cols"]=showFees?[{wch:4},{wch:26},{wch:10},{wch:14},{wch:16},{wch:14},{wch:14},{wch:10}]:[{wch:4},{wch:26},{wch:10},{wch:14},{wch:22},{wch:16},{wch:10}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,gradeLabel.replace("/","_").slice(0,31));
+    const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const blob=new Blob([wbout],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="ClassList_"+gradeLabel.replace(/ /g,"_")+"_"+academicYear+".xlsx";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  }
+
+  function dlPDF(){
+    const gradeLabel=selectedGrade==="all"?"All Classes":selectedGrade;
+    const orient=showFees?"landscape":"portrait";
+    const doc=new jsPDF({unit:"mm",format:"a4",orientation:orient});
+    const pw=doc.internal.pageSize.getWidth();
+    const ph=doc.internal.pageSize.getHeight();
+    doc.setFont("helvetica","bold");doc.setFontSize(13);doc.setTextColor(27,58,12);
+    doc.text("GRATITUDE BILINGUAL NURSERY & PRIMARY SCHOOL",pw/2,15,{align:"center"});
+    doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(107,107,96);
+    doc.text("Class List — "+gradeLabel+" — "+academicYear,pw/2,22,{align:"center"});
+    doc.setFontSize(8);doc.text("Generated: "+today_str,pw/2,28,{align:"center"});
+    doc.setDrawColor(200,210,190);doc.setLineWidth(0.4);doc.line(10,32,pw-10,32);
+    const colW=showFees?[8,55,13,20,22,20,20,14]:[8,62,13,22,58,28,14];
+    const hdrs=showFees?["#","Student Name","Gender","Student ID","Total Fees","Paid","Balance","Status"]:["#","Student Name","Gender","Student ID","Parent / Guardian","Phone","Status"];
+    let y=40;const rh=7;
+    const drawRow=(cells,isHdr,isTot)=>{
+      if(y>ph-18){doc.addPage();y=20;doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(150,150,140);doc.text(gradeLabel+" — "+academicYear+" (cont.)",pw/2,14,{align:"center"});}
+      if(isHdr){doc.setFillColor(240,248,232);doc.rect(10,y-5,pw-20,rh,"F");}
+      else if(isTot){doc.setFillColor(245,245,240);doc.rect(10,y-5,pw-20,rh,"F");}
+      doc.setFont("helvetica",isHdr||isTot?"bold":"normal");
+      doc.setFontSize(isHdr?8.5:8);doc.setTextColor(isHdr?27:24,isHdr?58:24,isHdr?12:26);
+      let x=12;
+      cells.forEach((cell,ci)=>{
+        const alignR=showFees&&ci>3&&ci<7;
+        doc.text(String(cell||""),alignR?x+colW[ci]-3:x,y,{maxWidth:colW[ci]-2,align:alignR?"right":"left"});
+        x+=colW[ci];
+      });
+      doc.setDrawColor(224,224,212);doc.setLineWidth(0.2);doc.line(10,y+2,pw-10,y+2);
+      y+=rh;
+    };
+    drawRow(hdrs,true,false);
+    filtered.forEach((s,i)=>{
+      const cells=showFees
+        ?[i+1,s.last_name+", "+s.first_name,s.gender||"—",s.student_code||"—",fmtAmt(totalDue(s.id)),fmtAmt(totalPaid(s.id)),fmtAmt(balance(s.id)),s.status==="active"?"Active":"Inactive"]
+        :[i+1,s.last_name+", "+s.first_name,s.gender||"—",s.student_code||"—",s.parent_name||"—",s.phone||"—",s.status==="active"?"Active":"Inactive"];
+      drawRow(cells,false,false);
+    });
+    if(showFees){
+      const tf=filtered.reduce((sum,s)=>sum+totalDue(s.id),0);
+      const tp=filtered.reduce((sum,s)=>sum+totalPaid(s.id),0);
+      const tb=filtered.reduce((sum,s)=>sum+balance(s.id),0);
+      drawRow(["","TOTALS","","",fmtAmt(tf),fmtAmt(tp),fmtAmt(tb),""],false,true);
+    }
+    y+=4;doc.setFont("helvetica","italic");doc.setFontSize(8);doc.setTextColor(107,107,96);
+    doc.text("Total: "+filtered.length+" student"+(filtered.length!==1?"s":""),12,y);
+    doc.text("Official — Gratitude BN&PS",pw-12,y,{align:"right"});
+    doc.save("ClassList_"+gradeLabel.replace(/ /g,"_")+"_"+academicYear+".pdf");
+  }
+
+  const th={padding:"8px 12px",textAlign:"left",fontSize:11,fontWeight:600,color:"#6B6B60",borderBottom:"2px solid #E0E0D4",background:"#F0F8E8",textTransform:"uppercase",letterSpacing:"0.04em",whiteSpace:"nowrap"};
+  const td={padding:"8px 12px",fontSize:12,borderBottom:"1px solid #F0F0E8",verticalAlign:"middle"};
+
+  return(
+    <div>
+      <div style={{fontFamily:"Georgia,serif",fontSize:21,fontWeight:"bold",color:"#1B3A0C",marginBottom:20}}>📋 Class Lists</div>
+      <Card style={{marginBottom:16}}>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+          <div>
+            <div style={{fontSize:11,fontWeight:600,color:"#6B6B60",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:5}}>Class / Grade</div>
+            <select value={selectedGrade} onChange={e=>setSelectedGrade(e.target.value)} style={{padding:"8px 12px",border:"1px solid #E0E0D4",borderRadius:7,fontSize:13,fontFamily:"inherit",background:"#fff",minWidth:140}}>
+              <option value="all">All Classes</option>
+              {gradeOptions.filter(g=>g!=="all").map(g=><option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:600,color:"#6B6B60",textTransform:"uppercase",letterSpacing:"0.04em",marginBottom:5}}>Report Type</div>
+            <div style={{display:"flex",borderRadius:7,overflow:"hidden",border:"1px solid #E0E0D4"}}>
+              <button onClick={()=>setShowFees(false)} style={{padding:"8px 16px",fontSize:13,border:"none",cursor:"pointer",background:!showFees?"#2E5818":"#fff",color:!showFees?"#fff":"#1B3A0C",fontFamily:"inherit",fontWeight:500}}>Student List</button>
+              <button onClick={()=>setShowFees(true)} style={{padding:"8px 16px",fontSize:13,border:"none",borderLeft:"1px solid #E0E0D4",cursor:"pointer",background:showFees?"#2E5818":"#fff",color:showFees?"#fff":"#1B3A0C",fontFamily:"inherit",fontWeight:500}}>With Fee Details</button>
+            </div>
+          </div>
+          <div style={{flex:1}}/>
+          <div style={{display:"flex",gap:8}}>
+            <Btn onClick={dlExcel}>📥 Excel</Btn>
+            <Btn variant="primary" onClick={dlPDF}>📄 PDF</Btn>
+          </div>
+        </div>
+        <div style={{marginTop:10,fontSize:12,color:"#6B6B60"}}>
+          Showing <strong>{filtered.length}</strong> student{filtered.length!==1?"s":""} sorted A–Z by surname{selectedGrade!=="all"?<> in <strong>{selectedGrade}</strong></>:""}
+        </div>
+      </Card>
+      <Card>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead><tr>
+              <th style={{...th,width:36}}>#</th>
+              <th style={th}>Student Name</th>
+              <th style={th}>Gender</th>
+              <th style={th}>Student ID</th>
+              {selectedGrade==="all"&&<th style={th}>Class</th>}
+              {!showFees&&<><th style={th}>Parent / Guardian</th><th style={th}>Phone</th></>}
+              {showFees&&<><th style={{...th,textAlign:"right"}}>Total Fees</th><th style={{...th,textAlign:"right"}}>Paid</th><th style={{...th,textAlign:"right"}}>Balance</th></>}
+              <th style={th}>Status</th>
+            </tr></thead>
+            <tbody>
+              {filtered.length===0&&<tr><td colSpan={9} style={{...td,textAlign:"center",color:"#6B6B60",padding:32}}>No students found.</td></tr>}
+              {filtered.map((s,i)=>(
+                <tr key={s.id} style={{background:i%2===0?"#fff":"#FAFAF8"}}>
+                  <td style={{...td,color:"#6B6B60",fontSize:11}}>{i+1}</td>
+                  <td style={{...td,fontWeight:600,color:"#1B3A0C"}}>{s.last_name}, {s.first_name}</td>
+                  <td style={td}>{s.gender||"—"}</td>
+                  <td style={{...td,fontSize:11,color:"#6B6B60"}}>{s.student_code||"—"}</td>
+                  {selectedGrade==="all"&&<td style={td}><Badge color="blue">{s.grade}</Badge></td>}
+                  {!showFees&&<><td style={td}>{s.parent_name||"—"}</td><td style={{...td,fontSize:11}}>{s.phone||"—"}</td></>}
+                  {showFees&&<>
+                    <td style={{...td,textAlign:"right"}}>{fmtAmt(totalDue(s.id))}</td>
+                    <td style={{...td,textAlign:"right",color:"#2E5818"}}>{fmtAmt(totalPaid(s.id))}</td>
+                    <td style={{...td,textAlign:"right",fontWeight:600,color:balance(s.id)<=0?"#2E5818":"#B91C1C"}}>{fmtAmt(balance(s.id))}</td>
+                  </>}
+                  <td style={td}><Badge color={s.status==="active"?"blue":"gray"}>{s.status==="active"?"Active":"Inactive"}</Badge></td>
+                </tr>
+              ))}
+              {showFees&&filtered.length>0&&(()=>{
+                const tf=filtered.reduce((s,x)=>s+totalDue(x.id),0);
+                const tp=filtered.reduce((s,x)=>s+totalPaid(x.id),0);
+                const tb=filtered.reduce((s,x)=>s+balance(x.id),0);
+                return<tr style={{background:"#F0F8E8",borderTop:"2px solid #4A7C2F44"}}>
+                  <td colSpan={4+(selectedGrade==="all"?1:0)} style={{...td,fontWeight:700,color:"#1B3A0C"}}>TOTALS — {filtered.length} students</td>
+                  <td style={{...td,textAlign:"right",fontWeight:700}}>{fmtAmt(tf)}</td>
+                  <td style={{...td,textAlign:"right",fontWeight:700,color:"#2E5818"}}>{fmtAmt(tp)}</td>
+                  <td style={{...td,textAlign:"right",fontWeight:700,color:tb<=0?"#2E5818":"#B91C1C"}}>{fmtAmt(tb)}</td>
+                  <td style={td}/>
+                </tr>;
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 function FileImportModal({onClose,onImported,academicYear}){
   const [students,setStudents]=useState([]);
   const [saving,setSaving]=useState(false);
@@ -554,7 +728,7 @@ export default function App(){
       supabase.from("payments").select("*").eq("academic_year",currentYear).order("created_at",{ascending:false}),
       supabase.from("academic_years").select("*").order("name"),
     ]);
-    setStudents(s.data||[]);setFees(f.data||[]);setPayments(p.data||[]);setAcademicYears(ay.data||[]);
+    setStudents((s.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setFees((f.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setPayments((p.data||[]).filter((v,i,a)=>a.findIndex(t=>t.id===v.id)===i));setAcademicYears(ay.data||[]);
     if(profile?.role==="super_admin"){const{data:u}=await supabase.from("profiles").select("*").order("full_name");setAllUsers(u||[]);}
     setLoading(false);
   }
@@ -646,7 +820,8 @@ export default function App(){
   if(!user||!profile)return <LoginScreen onLogin={(u,p)=>{setUser(u);setProfile(p);}}/>;
   if(loading)return <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",color:"#2E5818",fontSize:16}}>Loading {currentYear}...</div>;
 
-  const navItems=[{id:"dashboard",label:"Dashboard",show:true},{id:"students",label:"Students",show:can(profile.role,"students")},{id:"fees",label:"Fee Structure",show:can(profile.role,"fees")},{id:"payments",label:"Payments",show:can(profile.role,"payments")},{id:"reports",label:"Reports",show:can(profile.role,"reports")},{id:"settings",label:"Settings",show:can(profile.role,"settings")}].filter(n=>n.show);
+  const navItems=[{id:"dashboard",label:"Dashboard",show:true},{id:"students",label:"Students",show:can(profile.role,"students")},{id:"fees",label:"Fee Structure",show:can(profile.role,"fees")},{id:"payments",label:"Payments",show:can(profile.role,"payments")},{id:"reports",label:"Reports",show:can(profile.role,"reports")},
+    {id:"class_lists",label:"📋 Class Lists",show:can(profile.role,"reports")},{id:"settings",label:"Settings",show:can(profile.role,"settings")}].filter(n=>n.show);
 
   return(
     <div style={{display:"flex",minHeight:"100vh",background:"#F5F5F0",fontFamily:"system-ui,-apple-system,sans-serif"}}>
@@ -1040,6 +1215,8 @@ export default function App(){
           {academicYears.length>0&&<div style={{fontSize:12,color:"#6B6B60",padding:"8px 10px",background:"#F5F5F0",borderRadius:6}}>Existing years: <strong>{academicYears.map(y=>y.name+(y.is_current?" ★":"")).join(", ")}</strong></div>}
         </div>
       </Modal>
+
+      {page==="class_lists"&&<ClassListReport students={students} payments={payments} fees={fees} academicYear={currentYear} totalDue={totalDue} totalPaid={totalPaid} balance={balance}/>}
 
       {showFileImport&&<FileImportModal onClose={()=>setShowFileImport(false)} onImported={n=>{showToast(n+" students imported successfully!");fetchAll();}} academicYear={currentYear}/>}
 
