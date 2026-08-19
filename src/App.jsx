@@ -880,7 +880,7 @@ export default function App(){
             </Card>
             <Card><CardHeader>Recent payments</CardHeader>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead><tr><th style={th}>Student</th><th style={th}>Amount</th><th style={th}>Date</th><th style={th}>Method</th></tr></thead>
+                <thead><tr><th style={th}>First Name</th><th style={th}>Last Name</th><th style={th}>Amount</th><th style={th}>Date</th><th style={th}>Method</th></tr></thead>
                 <tbody>
                   {payments.slice(0,7).map(p=>{const st=students.find(x=>x.id===p.student_id);return <tr key={p.id}><td style={td}>{st?st.first_name:"—"}</td><td style={td}>{st?st.last_name:"—"}</td><td style={{...td,color:"#2E5818",fontWeight:600}}>{fmt(p.amount_paid)}</td><td style={td}>{p.payment_date}</td><td style={td}><Badge color="gray">{METHODS[p.method]||p.method}</Badge></td></tr>;})}
                   {!payments.length&&<tr><td colSpan={4} style={{...td,textAlign:"center",color:"#6B6B60"}}>No payments yet</td></tr>}
@@ -891,7 +891,7 @@ export default function App(){
           <Card>
             <CardHeader action={<span style={{fontSize:12,fontWeight:400,color:"#6B6B60"}}>{activeStudents.filter(s=>balance(s.id)>0).length} students</span>}>Outstanding balances — {currentYear}</CardHeader>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr><th style={th}>Student</th><th style={th}>Class</th><th style={th}>Total due</th><th style={th}>Paid</th><th style={th}>Balance</th>{can(profile.role,"payments")&&<th style={th}></th>}</tr></thead>
+              <thead><tr><th style={th}>First Name</th><th style={th}>Last Name</th><th style={th}>Class</th><th style={th}>Total due</th><th style={th}>Paid</th><th style={th}>Balance</th>{can(profile.role,"payments")&&<th style={th}></th>}</tr></thead>
               <tbody>
                 {activeStudents.filter(s=>balance(s.id)>0).sort((a,b)=>balance(b.id)-balance(a.id)).map(s=>(
                   <tr key={s.id} style={{cursor:"pointer"}} onClick={()=>openModal("profile",{student:s})}>
@@ -973,7 +973,7 @@ export default function App(){
           <div style={{display:"flex",gap:8,marginBottom:12}}><input style={{...inp,flex:1}} placeholder="Search by student name or receipt number..." value={search} onChange={e=>setSearch(e.target.value)}/></div>
           <Card>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr><th style={th}>Receipt #</th><th style={th}>Student</th><th style={th}>Class</th><th style={th}>Fee</th><th style={th}>Amount</th><th style={th}>Date</th><th style={th}>Method</th><th style={th}>By</th><th style={th}></th></tr></thead>
+              <thead><tr><th style={th}>Receipt #</th><th style={th}>First Name</th><th style={th}>Last Name</th><th style={th}>Class</th><th style={th}>Fee</th><th style={th}>Amount</th><th style={th}>Date</th><th style={th}>Method</th><th style={th}>By</th><th style={th}></th></tr></thead>
               <tbody>
                 {payments.filter(p=>{const st=students.find(x=>x.id===p.student_id);const q=search.toLowerCase();return!q||((st?`${st.first_name} ${st.last_name}`:"")+(p.receipt_number||"")).toLowerCase().includes(q);}).map(p=>{
                   const st=students.find(x=>x.id===p.student_id);
@@ -1014,7 +1014,7 @@ export default function App(){
           <Card>
             <CardHeader action={<span style={{fontSize:12,fontWeight:400,color:"#6B6B60"}}>{activeStudents.filter(x=>balance(x.id)>0).length} students · {fmt(activeStudents.filter(x=>balance(x.id)>0).reduce((s,x)=>s+balance(x.id),0))}</span>}>Fee defaulters — {currentYear}</CardHeader>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr><th style={th}>Student</th><th style={th}>Class</th><th style={th}>Parent contact</th><th style={th}>Balance due</th>{can(profile.role,"payments")&&<th style={th}></th>}</tr></thead>
+              <thead><tr><th style={th}>First Name</th><th style={th}>Last Name</th><th style={th}>Class</th><th style={th}>Parent contact</th><th style={th}>Balance due</th>{can(profile.role,"payments")&&<th style={th}></th>}</tr></thead>
               <tbody>
                 {activeStudents.filter(x=>balance(x.id)>0).sort((a,b)=>balance(b.id)-balance(a.id)).map(st=>(
                   <tr key={st.id}><td style={td}><strong>{st.first_name}</strong></td><td style={td}><strong>{st.last_name}</strong></td><td style={td}>{st.grade}</td><td style={{...td,fontSize:12}}>{st.phone||"—"}</td><td style={{...td,color:"#B91C1C",fontWeight:700}}>{fmt(balance(st.id))}</td>
