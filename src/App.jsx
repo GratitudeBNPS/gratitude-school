@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { supabase } from "./lib/supabase";
@@ -152,11 +153,64 @@ function generateReceiptPDF(payment,student,balance){
 }
 
 function Receipt({payment,student,balance}){
+  const receiptRef=useRef(null);
+
+  async function captureReceipt(){
+    const el=receiptRef.current;
+    if(!el)return null;
+    const canvas=await html2canvas(el,{
+      scale:3,
+      useCORS:true,
+      allowTaint:true,
+      backgroundColor:"#ffffff",
+      logging:false,
+    });
+    return canvas;
+  }
+
+  async function downloadPDF(){
+    try{
+      const canvas=await captureReceipt();
+      if(!canvas)return;
+      const imgData=canvas.toDataURL("image/png");
+      const pxW=canvas.width;const pxH=canvas.height;
+      const mmW=pxW*0.264583/3;const mmH=pxH*0.264583/3;
+      const doc=new jsPDF({unit:"mm",format:[mmW,mmH]});
+      doc.addImage(imgData,"PNG",0,0,mmW,mmH);
+      doc.save("Receipt-"+(payment.receipt_number||"receipt")+".pdf");
+    }catch(e){console.error("PDF error:",e);alert("Could not generate PDF: "+e.message);}
+  }
+
+  async function shareWhatsApp(){
+    try{
+      const canvas=await captureReceipt();
+      if(!canvas)return;
+      const phone=(student&&student.phone?student.phone:"").replace(/[^0-9]/g,"");
+      const fileName="Receipt-"+(payment.receipt_number||"receipt")+".pdf";
+      const imgData=canvas.toDataURL("image/png");
+      const pxW=canvas.width;const pxH=canvas.height;
+      const mmW=pxW*0.264583/3;const mmH=pxH*0.264583/3;
+      const doc=new jsPDF({unit:"mm",format:[mmW,mmH]});
+      doc.addImage(imgData,"PNG",0,0,mmW,mmH);
+      try{
+        const blob=doc.output("blob");
+        const file=new File([blob],fileName,{type:"application/pdf"});
+        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:fileName});
+          return;
+        }
+      }catch(e){console.log("Share API not available");}
+      doc.save(fileName);
+      if(phone)setTimeout(()=>window.open("https://wa.me/"+phone,"_blank"),400);
+    }catch(e){console.error("Share error:",e);alert("Could not share: "+e.message);}
+  }
+
+
   const rows=[["Student",student?`${student.first_name} ${student.last_name}`:"—"],["Student ID",student?.student_code||"—"],["Class",student?.grade||"—"],["Academic Year",payment.academic_year||"—"],["Fee",payment.fee_name||"General payment"],["Payment method",METHODS[payment.method]||payment.method],["Date",payment.payment_date||payment.date],["Received by",payment.received_by||"Admin"],...(payment.notes?[["Notes",payment.notes]]:[])];
   const txt=`*GRATITUDE BILINGUAL NURSERY & PRIMARY SCHOOL*\nPayment Receipt\nReceipt: ${payment.receipt_number}\n\nStudent: ${student?.first_name} ${student?.last_name}\nID: ${student?.student_code}\nClass: ${student?.grade}\nAcademic Year: ${payment.academic_year}\nFee: ${payment.fee_name||"General"}\nDate: ${payment.payment_date}\nMethod: ${METHODS[payment.method]||payment.method}\n\nAmount paid: ${fmt(payment.amount_paid)}\nBalance remaining: ${fmt(balance)}\n\nGratitude Bilingual Nursery & Primary School - Official Receipt`;
   return(
     <div>
-      <div style={{border:"2px dashed #E0E0D4",borderRadius:10,padding:20,background:"#FAFAF6"}}>
+      <div ref={receiptRef} style={{border:"2px dashed #E0E0D4",borderRadius:10,padding:20,background:"#FAFAF6"}}>
         <div style={{textAlign:"center",marginBottom:16}}>
           <img src="/logo.png" alt="Gratitude" style={{height:60,marginBottom:8}}/>
           <div style={{fontFamily:"Georgia,serif",fontSize:15,fontWeight:"bold",color:"#1B3A0C"}}>Gratitude Bilingual Nursery & Primary School</div>
