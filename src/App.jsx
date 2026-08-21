@@ -465,24 +465,24 @@ function FileImportModal({onClose,onImported,academicYear}){
       if(!val)return"";
       const s=String(val).trim();
       // Excel serial number (number only)
-      if(/^d{4,6}$/.test(s)){
+      if(/^\d{4,6}$/.test(s)){
         const d=new Date((parseInt(s)-25569)*86400*1000);
         if(!isNaN(d))return d.toISOString().slice(0,10);
       }
       // DD-MM-YYYY or DD-MM-YY
-      const dmY=s.match(/^(d{1,2})[-/](d{1,2})[-/](d{2,4})$/);
+      const dmY=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/);
       if(dmY){
         let[,d,m,y]=dmY;
         if(y.length===2)y="20"+y;
         return y+"-"+m.padStart(2,"0")+"-"+d.padStart(2,"0");
       }
       // Already YYYY-MM-DD
-      if(/^d{4}-d{2}-d{2}$/.test(s))return s;
+      if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
       return"";
     };
 
     // Normalise class names
-    const normaliseClass=raw=>{
+    const normaliseClass=rawVal=>{
       const norm={
         "prenursery":"Pre Nursery","pre nursery":"Pre Nursery","pre-nursery":"Pre Nursery",
         "nursery1":"Nursery 1","nursery 1":"Nursery 1","nursery-1":"Nursery 1","n1":"Nursery 1",
@@ -494,8 +494,8 @@ function FileImportModal({onClose,onImported,academicYear}){
         "primary5":"Primary 5","primary 5":"Primary 5","p5":"Primary 5","grade5":"Primary 5","grade 5":"Primary 5",
         "primary6":"Primary 6","primary 6":"Primary 6","p6":"Primary 6","grade6":"Primary 6","grade 6":"Primary 6",
       };
-      const key=(raw||"").trim().toLowerCase();
-      return norm[key]||raw.trim();
+      const key=(rawVal||"").trim().toLowerCase();
+      return norm[key]||rawVal.trim();
     };
 
     // Clean gender
@@ -509,7 +509,7 @@ function FileImportModal({onClose,onImported,academicYear}){
     // Clean phone - take first number if multiple
     const cleanPhone=v=>{
       if(!v||v==="N/A"||v==="null")return"";
-      return v.replace(/s{2,}.*/,"").trim(); // take only up to first double space
+      return v.replace(/\s{2,}.*/,"").trim(); // take only up to first double space
     };
 
     const dateVal=clean("dateofreg")||clean("dateofregddmmyyyy")||clean("dateofbirth")||clean("dateofbirthyyyymmdd")||clean("dob")||"";
