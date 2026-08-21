@@ -455,17 +455,75 @@ function FileImportModal({onClose,onImported,academicYear}){
 
   function mapRow(row){
     const k=key=>Object.keys(row).find(h=>h.toLowerCase().replace(/[^a-z]/g,"")===key.toLowerCase().replace(/[^a-z]/g,""));
-    const g=key=>{const found=k(key);return found?String(row[found]||"").trim():"";};
+    const raw=key=>{const found=k(key);return found?String(row[found]||"").trim():"";};
+
+    // Clean value: trim, remove N/A
+    const clean=key=>{const v=raw(key);return(v==="N/A"||v==="n/a"||v==="-"||v==="NA"||v==="null")?"":v;};
+
+    // Parse date - handles Excel serial, DD-MM-YYYY, DD/MM/YY, YYYY-MM-DD
+    const parseDate=val=>{
+      if(!val)return"";
+      const s=String(val).trim();
+      // Excel serial number (number only)
+      if(/^d{4,6}$/.test(s)){
+        const d=new Date((parseInt(s)-25569)*86400*1000);
+        if(!isNaN(d))return d.toISOString().slice(0,10);
+      }
+      // DD-MM-YYYY or DD-MM-YY
+      const dmY=s.match(/^(d{1,2})[-/](d{1,2})[-/](d{2,4})$/);
+      if(dmY){
+        let[,d,m,y]=dmY;
+        if(y.length===2)y="20"+y;
+        return y+"-"+m.padStart(2,"0")+"-"+d.padStart(2,"0");
+      }
+      // Already YYYY-MM-DD
+      if(/^d{4}-d{2}-d{2}$/.test(s))return s;
+      return"";
+    };
+
+    // Normalise class names
+    const normaliseClass=raw=>{
+      const norm={
+        "prenursery":"Pre Nursery","pre nursery":"Pre Nursery","pre-nursery":"Pre Nursery",
+        "nursery1":"Nursery 1","nursery 1":"Nursery 1","nursery-1":"Nursery 1","n1":"Nursery 1",
+        "nursery2":"Nursery 2","nursery 2":"Nursery 2","nursery-2":"Nursery 2","n2":"Nursery 2",
+        "primary1":"Primary 1","primary 1":"Primary 1","p1":"Primary 1","grade1":"Primary 1","grade 1":"Primary 1",
+        "primary2":"Primary 2","primary 2":"Primary 2","p2":"Primary 2","grade2":"Primary 2","grade 2":"Primary 2",
+        "primary3":"Primary 3","primary 3":"Primary 3","p3":"Primary 3","grade3":"Primary 3","grade 3":"Primary 3",
+        "primary4":"Primary 4","primary 4":"Primary 4","p4":"Primary 4","grade4":"Primary 4","grade 4":"Primary 4",
+        "primary5":"Primary 5","primary 5":"Primary 5","p5":"Primary 5","grade5":"Primary 5","grade 5":"Primary 5",
+        "primary6":"Primary 6","primary 6":"Primary 6","p6":"Primary 6","grade6":"Primary 6","grade 6":"Primary 6",
+      };
+      const key=(raw||"").trim().toLowerCase();
+      return norm[key]||raw.trim();
+    };
+
+    // Clean gender
+    const cleanGender=v=>{
+      const g=(v||"").trim().toLowerCase();
+      if(g==="male"||g==="m")return"Male";
+      if(g==="female"||g==="f")return"Female";
+      return"";
+    };
+
+    // Clean phone - take first number if multiple
+    const cleanPhone=v=>{
+      if(!v||v==="N/A"||v==="null")return"";
+      return v.replace(/s{2,}.*/,"").trim(); // take only up to first double space
+    };
+
+    const dateVal=clean("dateofreg")||clean("dateofregddmmyyyy")||clean("dateofbirth")||clean("dateofbirthyyyymmdd")||clean("dob")||"";
+
     return{
-      first_name:g("firstname")||g("first name"),
-      last_name:g("lastname")||g("last name"),
-      date_of_birth:g("dateofbirth")||g("dateofbirthyyyymmdd")||g("dob")||"",
-      gender:g("gender")||g("gendermaleorfemale")||"",
-      grade:g("class")||g("grade")||"",
-      parent_name:g("parentname")||g("parent name")||g("parent")||"",
-      phone:g("phonenumber")||g("phone number")||g("phone")||"",
-      status:g("status")||g("statusactivityorinactive")||"active",
-      notes:g("notes")||"",
+      first_name:(clean("firstname")||clean("first name")||"").trim(),
+      last_name:(clean("lastname")||clean("last name")||"").trim(),
+      date_of_birth:parseDate(dateVal),
+      gender:cleanGender(raw("gender")||raw("gendermaleorfemale")||""),
+      grade:normaliseClass(clean("class")||clean("grade")||""),
+      parent_name:clean("parentname")||clean("parent name")||clean("parent")||"",
+      phone:cleanPhone(raw("phonenumber")||raw("phone number")||raw("phone")||""),
+      status:(clean("status")||"active").toLowerCase()==="active"?"active":"inactive",
+      notes:clean("notes")||"",
     };
   }
 
@@ -530,11 +588,7 @@ function FileImportModal({onClose,onImported,academicYear}){
     }));
     const{data:existing}=await supabase.from("students").select("first_name,last_name,grade").eq("academic_year",academicYear);
     const existSet=new Set((existing||[]).map(s=>s.first_name.toLowerCase()+"|"+s.last_name.toLowerCase()+"|"+s.grade));
-    const{error}=await supabase.from("students").insert(newOnly);
-    setSaving(false);
-    if(error){alert("Error saving: "+error.message);return;}
-    onImported(valid.length);
-    onClose();
+    const chunkSize=50;let imported=0;for(let i=0;i<payload.length;i+=chunkSize){const chunk=payload.slice(i,i+chunkSize);const{error}=await supabase.from("students").insert(chunk);if(error){setSaving(false);alert("Error on batch "+(Math.floor(i/chunkSize)+1)+": "+error.message);return;}imported+=chunk.length;}setSaving(false);onImported(imported);onClose();
   }
 
   const valid=students.filter(s=>s.first_name&&s.last_name&&s.grade);
