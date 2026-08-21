@@ -1007,7 +1007,7 @@ export default function App(){
           </div>
           <Card>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
-              <thead><tr><th style={th}>ID</th><th style={th}>Name</th><th style={th}>Class</th><th style={th}>Parent</th><th style={th}>Contact</th><th style={th}>Balance</th><th style={th}>Status</th>{can(profile.role,"students")&&<th style={th}></th>}</tr></thead>
+              <thead><tr><th style={th}>ID</th><th style={th}>First Name</th><th style={th}>Last Name</th><th style={th}>Class</th><th style={th}>Parent</th><th style={th}>Contact</th><th style={th}>Balance</th><th style={th}>Status</th>{can(profile.role,"students")&&<th style={th}></th>}</tr></thead>
               <tbody>
                 {students.filter(st=>{const q=search.toLowerCase();return(!q||(st.first_name+" "+st.last_name+" "+(st.student_code||"")).toLowerCase().includes(q))&&(!gFilter||st.grade===gFilter);}).map(st=>{
                   const bal=balance(st.id);
