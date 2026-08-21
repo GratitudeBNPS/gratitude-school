@@ -219,6 +219,7 @@ function Receipt({payment,student,balance}){
 }
 
 }
+}
 function LoginScreen({onLogin}){
   const [email,setEmail]=useState("");
   const [password,setPassword]=useState("");
